@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Protótipo navegável Hanaro" />
+    <title>Hanaro</title>
+    <link rel="icon" href="assets/logos/favicon.svg" type="image/svg+xml" />
+    <script>
+      (() => {
+        const preference = localStorage.getItem("hanaro-theme") || "system";
+        const dark =
+          preference === "dark" ||
+          (preference === "system" &&
+            matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.dataset.themePreference = preference;
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="assets/vendor/echarts.min.js" defer></script>
+    <script src="scripts.js" defer></script>
+  </head>
+  <body>
+    <div class="dashboard-shell" id="app-shell">
+      <button
+        class="sidebar-backdrop"
+        id="sidebar-backdrop"
+        type="button"
+        aria-label="Fechar menu"
+      ></button>
+      <aside class="dashboard-sidebar" aria-label="Navegação principal">
+        <div class="sidebar-panel">
+          <header class="sidebar-header">
+            <div class="sidebar-toolbar">
+              <a
+                class="brand-logo"
+                href="#dashboard"
+                aria-label="Hanaro — ir ao Dashboard"
+              >
+                <img
+                  class="brand-logo-img logo-expanded logo-expanded-light"
+                  src="assets/logos/hanaro-expanded-light.svg"
+                  alt="Hanaro"
+                />
+                <img
+                  class="brand-logo-img logo-expanded logo-expanded-dark"
+                  src="assets/logos/hanaro-expanded-dark.svg"
+                  alt="Hanaro"
+                />
+                <img
+                  class="brand-logo-img logo-collapsed logo-collapsed-light"
+                  src="assets/logos/hanaro-collapsed-light.svg"
+                  alt=""
+                />
+                <img
+                  class="brand-logo-img logo-collapsed logo-collapsed-dark"
+                  src="assets/logos/hanaro-collapsed-dark.svg"
+                  alt=""
+                />
+              </a>
+              <button
+                class="sidebar-toggle icon-button-plain"
+                id="sidebar-toggle"
+                type="button"
+                aria-label="Recolher menu"
+                aria-expanded="true"
+              ></button>
+            </div>
+          </header>
+          <nav class="sidebar-content" aria-label="Módulos do Hanaro">
+            <ul class="nav-menu" id="main-navigation"></ul>
+          </nav>
+          <div class="sidebar-utilities">
+            <button
+              class="utility-button"
+              type="button"
+              data-action="support"
+            ></button>
+          </div>
+          <footer class="sidebar-footer">
+            <div class="profile-summary">
+              <span class="avatar" aria-hidden="true">MF</span>
+              <span class="profile-copy sidebar-copy"
+                ><strong>Marina França</strong
+                ><small>Analista de Qualidade</small></span
+              >
+              <button
+                class="icon-button-plain profile-menu-trigger"
+                type="button"
+                data-action="profile"
+                aria-label="Abrir perfil"
+              ></button>
+            </div>
+          </footer>
+        </div>
+      </aside>
+
+      <div class="dashboard-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button
+              class="icon-button menu-trigger"
+              id="mobile-menu"
+              type="button"
+              aria-label="Abrir menu"
+            ></button>
+            <nav
+              class="breadcrumbs"
+              aria-label="Navegação estrutural"
+              id="breadcrumb"
+            ></nav>
+          </div>
+          <div class="topbar-actions">
+            <span class="sync-state" id="sync-state">Atualizado às 09:42</span>
+            <button
+              class="icon-button"
+              type="button"
+              data-action="notifications"
+              aria-label="Notificações"
+            >
+              <span class="notification-dot"></span>
+            </button>
+            <button
+              class="icon-button tv-mode-trigger"
+              id="tv-mode-trigger"
+              type="button"
+              data-action="enter-tv"
+              aria-label="Abrir Modo TV"
+              title="Modo TV"
+            ></button>
+            <button
+              class="icon-button theme-quick-toggle"
+              type="button"
+              data-action="toggle-theme"
+              aria-label="Alternar tema"
+            ></button>
+          </div>
+        </header>
+        <main class="app-canvas" id="main-canvas" tabindex="-1">
+          <div class="dashboard-content" id="page-content"></div>
+        </main>
+      </div>
+    </div>
+
+    <div class="overlay-layer" id="overlay-layer" aria-live="polite"></div>
+    <section
+      class="tv-mode"
+      id="tv-mode"
+      aria-label="Modo TV Hanaro"
+      aria-hidden="true"
+    ></section>
+    <div
+      class="toast-region"
+      id="toast-region"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+    <noscript
+      >Este protótipo precisa de JavaScript habilitado para funcionar.</noscript
+    >
+  </body>
+</html>
