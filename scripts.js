@@ -13,6 +13,7 @@ let chartInstances = [];
 
 const iconPaths = {
   dashboard: ['M4 20V10', 'M10 20V4', 'M16 20v-7', 'M22 20H2'],
+  language: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M3 12h18', 'M12 3a14 14 0 0 1 0 18', 'M12 3a14 14 0 0 0 0 18'],
   database: ['M4 6c0-2 3.6-3.5 8-3.5S20 4 20 6s-3.6 3.5-8 3.5S4 8 4 6Z', 'M4 6v6c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5V6', 'M4 12v6c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5v-6'],
   bell: ['M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z', 'M10 21h4'],
   analysis: ['M4 14a8 8 0 1 1 4 5.5', 'M3 21l5-5', 'M8 16v5H3', 'M8 12h2l2-5 3 10 2-5h3'],
@@ -223,9 +224,14 @@ const model = {
 
 const initialRouteParts = (location.hash.slice(1) || 'dashboard').split('?')[0].split('/');
 const initialReviewId = initialRouteParts[0] === 'scrap' && initialRouteParts[1] === 'revisar' ? decodeURIComponent(initialRouteParts[2] || '') : null;
+const supportedLocales = ['pt-BR', 'en', 'ko'];
+const storedLocale = localStorage.getItem('hanaro-locale');
+const queryLocale = new URLSearchParams(location.search).get('lang');
 const state = {
   route: initialRouteParts[0] || 'dashboard', reportTab: 'gerar', settingsTab: 'negocio',
+  locale: supportedLocales.includes(queryLocale) ? queryLocale : supportedLocales.includes(storedLocale) ? storedLocale : 'pt-BR',
   scrapPage: 1, scrapPageSize: 10, scrapSearch: '', scrapSort: { key: 'date', direction: 'desc' }, auditSearch: '', dashboardFactor: 1,
+  dashboardFilters: { period: '01/08/2026 — 12/08/2026', view: 'Acumulado', division: 'Todas', department: 'Todos', line: 'Todas', family: 'Todas', module: 'Todos' },
   scrapFilters: { date: 'Todas as datas', division: 'Todas', department: 'Todos', line: 'Todas', reviewStatus: 'Todos' },
   alertSeverity: 'Todas', executionStatus: 'Todos', auditEntity: 'Todas', reportFactor: 1,
   scrapView: initialRouteParts[1] === 'revisar' ? 'review' : 'list', selectedScrapIds: initialReviewId ? [initialReviewId] : [], activeReviewId: initialReviewId,
@@ -234,6 +240,401 @@ const state = {
 };
 let tvTimer = null;
 let tvControlsTimer = null;
+
+const i18nMessages = {
+  en: {
+    'Base de Scrap': 'Scrap Database', 'Alertas': 'Alerts', 'Relatórios': 'Reports', 'Execuções': 'Runs', 'Auditoria': 'Audit', 'Configurações': 'Settings',
+    'Ajuda e suporte': 'Help and support', 'Analista de Qualidade': 'Quality Analyst', 'Atualizado às 09:42': 'Updated at 09:42',
+    'Dashboard de Scrap': 'Scrap Dashboard', 'Atualizar': 'Refresh', 'Exportar dados': 'Export data', 'Gerar relatório': 'Generate report', 'Limpar filtros': 'Clear filters',
+    'Período': 'Period', 'Visão': 'View', 'Departamento': 'Department', 'Linha': 'Line', 'Família': 'Family', 'Material': 'Material',
+    'Acumulado': 'Cumulative', 'Diário': 'Daily', 'Semanal': 'Weekly', 'Mensal': 'Monthly', 'Todas': 'All', 'Todos': 'All', 'Últimos 7 dias': 'Last 7 days',
+    'IF Cost acumulado': 'Cumulative IF Cost', 'Mesmo período': 'Same period', 'Redução': 'Reduction', 'Gap para meta': 'Gap to target', 'Scrap registrado': 'Recorded scrap',
+    'Evolução acumulada do IF Cost': 'Cumulative IF Cost trend', 'Evolução diária do IF Cost': 'Daily IF Cost trend', 'Evolução semanal do IF Cost': 'Weekly IF Cost trend', 'Evolução mensal do IF Cost': 'Monthly IF Cost trend',
+    'Comparativo automático 2026, 2025 e meta': 'Automatic comparison: 2026, 2025 and target', 'Top ofensores': 'Top offenders', 'Explorar na Base': 'Explore database',
+    'Pareto de componentes': 'Component Pareto', 'IF Cost por departamento': 'IF Cost by department', 'Ocorrências que exigem atenção': 'Occurrences requiring attention',
+    'Data': 'Date', 'Produto': 'Product', 'Componente': 'Component', 'Status': 'Status', 'Ações': 'Actions', 'Ver na Base': 'View in database', 'Revisar': 'Review', 'Ver revisão': 'View review',
+    'Buscar Part Number, produto ou ID...': 'Search Part Number, product or ID...', 'Mais filtros': 'More filters', 'Data da transação': 'Transaction date', 'Status da revisão': 'Review status',
+    'Todas as datas': 'All dates', 'Hoje': 'Today', 'Pendente de revisão': 'Pending review', 'Em revisão': 'Under review', 'Justificado': 'Justified',
+    'IF Cost filtrado': 'Filtered IF Cost', 'QTY filtrada': 'Filtered QTY', 'Participação no total': 'Share of total', 'Pendentes de revisão': 'Pending review', 'Justificados': 'Justified',
+    'Ranking de Part Numbers': 'Part Number ranking', 'Registros de scrap': 'Scrap records', 'Revisão': 'Review', 'Ação': 'Action', 'Justificar selecionados': 'Justify selected', 'Limpar seleção': 'Clear selection',
+    'Revisar registros de scrap': 'Review scrap records', 'Voltar para a Base': 'Back to database', 'Salvar rascunho': 'Save draft', 'Seleção': 'Selection',
+    'Registro de scrap': 'Scrap record', 'Ocorrência de produção': 'Production occurrence', 'Componente afetado': 'Affected component', 'Posto': 'Station',
+    'Revisão humana': 'Human review', 'Justificativa do scrap': 'Scrap justification', 'Categoria da justificativa': 'Justification category', 'Revisor responsável': 'Responsible reviewer',
+    'Justificativa obrigatória': 'Required justification', 'Este item exige análise de causa detalhada': 'This item requires detailed root cause analysis', 'Classificação 4M': '4M classification',
+    'Causa identificada': 'Identified cause', 'Ação corretiva': 'Corrective action', 'Ação preventiva': 'Preventive action', 'Evidências': 'Evidence', 'Adicionar evidência': 'Add evidence',
+    'Incluir no próximo relatório': 'Include in next report', 'Origem': 'Source', 'Execução': 'Run', 'Defeito de produção': 'Production defect', 'Defeito observado': 'Observed defect',
+    'Ocorrência registrada': 'Recorded occurrence', 'Dados do scrap': 'Scrap data', 'Rastreabilidade automática': 'Automatic traceability', 'Processado em': 'Processed at',
+    'Severidade': 'Severity', 'Tipo': 'Type', 'Componente afetado': 'Affected component', 'Novos': 'New', 'Críticos': 'Critical', 'Lidos': 'Read', 'Enviados por e-mail': 'Sent by email',
+    'Alertas por dia': 'Alerts per day', 'Origem das notificações': 'Notification source', 'Evento': 'Event', 'Descrição': 'Description', 'Leitura': 'Read status', 'Canal': 'Channel', 'Ver registros': 'View records',
+    'Marcar novos como lidos': 'Mark new as read', 'Exportar': 'Export', 'Gerar relatório': 'Generate report', 'Versões': 'Versions', 'Envios': 'Deliveries', 'Novo relatório': 'New report',
+    'Exportar histórico': 'Export history', 'Configuração': 'Configuration', 'Comparação': 'Comparison', 'Formato': 'Format', 'Gerar PDF': 'Generate PDF', 'Gerar Excel': 'Generate Excel',
+    'Gerar e registrar versão': 'Generate and register version', 'Registros justificados do período': 'Justified records for the period', 'Preview': 'Preview',
+    'Execuções': 'Runs', 'Origem': 'Source', 'Início': 'Start', 'Fim': 'End', 'Duração': 'Duration', 'Recebidos': 'Received', 'Válidos': 'Valid', 'Rejeitados': 'Rejected',
+    'Execuções hoje': 'Runs today', 'Concluídas': 'Completed', 'Parciais': 'Partial', 'Falhas': 'Failures', 'Registros processados': 'Processed records',
+    'Eventos hoje': 'Events today', 'Ações humanas': 'Human actions', 'Eventos automáticos': 'Automated events', 'Eventos críticos': 'Critical events', 'Ator': 'Actor', 'Entidade': 'Entity',
+    'Negócio': 'Business', 'Dados': 'Data', 'Notificações': 'Notifications', 'Acesso': 'Access', 'Integrações': 'Integrations', 'Interface': 'Interface', 'Salvar alterações': 'Save changes',
+    'Tema': 'Theme', 'Escolha a aparência da interface.': 'Choose the interface appearance.', 'Claro': 'Light', 'Escuro': 'Dark', 'Sistema': 'System', 'Idioma': 'Language',
+    'Idioma exibido na interface do sistema.': 'Language displayed in the system interface.', 'Português': 'Portuguese', 'Inglês': 'English', 'Coreano': 'Korean',
+    'Seleção ilustrativa neste protótipo.': 'Illustrative selection in this prototype.', 'Metas de Material Scrap': 'Material Scrap targets', 'Regras de dados': 'Data rules',
+    'Padrões de relatório': 'Report defaults', 'Nome': 'Name', 'Grupo': 'Group', 'Usuário': 'User', 'Perfil': 'Role', 'Escopo': 'Scope',
+    'Modo TV': 'TV Mode', 'Abrir Modo TV': 'Open TV Mode', 'Alternar tema': 'Toggle theme', 'Notificações': 'Notifications', 'Alterar idioma': 'Change language'
+  },
+  ko: {
+    'Dashboard': '대시보드', 'Base de Scrap': '스크랩 데이터', 'Alertas': '알림', 'Relatórios': '보고서', 'Execuções': '실행', 'Auditoria': '감사', 'Configurações': '설정',
+    'Ajuda e suporte': '도움말 및 지원', 'Analista de Qualidade': '품질 분석가', 'Atualizado às 09:42': '09:42 업데이트',
+    'Dashboard de Scrap': '스크랩 대시보드', 'Atualizar': '새로고침', 'Exportar dados': '데이터 내보내기', 'Gerar relatório': '보고서 생성', 'Limpar filtros': '필터 초기화',
+    'Período': '기간', 'Visão': '보기', 'Division': '사업부', 'Departamento': '부서', 'Linha': '라인', 'Família': '제품군', 'Material': '자재',
+    'Acumulado': '누적', 'Diário': '일간', 'Semanal': '주간', 'Mensal': '월간', 'Todas': '전체', 'Todos': '전체', 'Últimos 7 dias': '최근 7일',
+    'IF Cost acumulado': '누적 IF Cost', 'Mesmo período': '동일 기간', 'Redução': '감소율', 'Gap para meta': '목표 차이', 'Scrap registrado': '등록 스크랩',
+    'Evolução acumulada do IF Cost': '누적 IF Cost 추이', 'Evolução diária do IF Cost': '일간 IF Cost 추이', 'Evolução semanal do IF Cost': '주간 IF Cost 추이', 'Evolução mensal do IF Cost': '월간 IF Cost 추이',
+    'Comparativo automático 2026, 2025 e meta': '2026년, 2025년 및 목표 자동 비교', 'Top ofensores': '주요 손실 항목', 'Explorar na Base': '데이터에서 보기',
+    'Pareto de componentes': '부품 파레토', 'IF Cost por departamento': '부서별 IF Cost', 'Ocorrências que exigem atenção': '주의가 필요한 발생 건',
+    'Data': '날짜', 'Produto': '제품', 'Componente': '부품', 'Status': '상태', 'Ações': '작업', 'Ver na Base': '데이터 보기', 'Revisar': '검토', 'Ver revisão': '검토 보기',
+    'Buscar Part Number, produto ou ID...': '부품 번호, 제품 또는 ID 검색...', 'Mais filtros': '추가 필터', 'Data da transação': '거래 날짜', 'Status da revisão': '검토 상태',
+    'Todas as datas': '전체 날짜', 'Hoje': '오늘', 'Pendente de revisão': '검토 대기', 'Em revisão': '검토 중', 'Justificado': '사유 등록 완료',
+    'IF Cost filtrado': '필터된 IF Cost', 'QTY filtrada': '필터된 수량', 'Participação no total': '전체 비중', 'Pendentes de revisão': '검토 대기', 'Justificados': '사유 등록 완료',
+    'Ranking de Part Numbers': '부품 번호 순위', 'Registros de scrap': '스크랩 기록', 'Revisão': '검토', 'Ação': '작업', 'Justificar selecionados': '선택 항목 사유 등록', 'Limpar seleção': '선택 해제',
+    'Revisar registros de scrap': '스크랩 기록 검토', 'Voltar para a Base': '데이터로 돌아가기', 'Salvar rascunho': '초안 저장', 'Seleção': '선택 항목',
+    'Registro de scrap': '스크랩 기록', 'Ocorrência de produção': '생산 발생 건', 'Componente afetado': '영향 부품', 'Posto': '작업 공정',
+    'Revisão humana': '담당자 검토', 'Justificativa do scrap': '스크랩 사유', 'Categoria da justificativa': '사유 분류', 'Revisor responsável': '담당 검토자',
+    'Justificativa obrigatória': '필수 사유', 'Este item exige análise de causa detalhada': '이 항목은 상세 원인 분석이 필요합니다', 'Classificação 4M': '4M 분류',
+    'Causa identificada': '확인된 원인', 'Ação corretiva': '시정 조치', 'Ação preventiva': '예방 조치', 'Evidências': '증빙', 'Adicionar evidência': '증빙 추가',
+    'Incluir no próximo relatório': '다음 보고서에 포함', 'Origem': '출처', 'Execução': '실행', 'Defeito de produção': '생산 결함', 'Defeito observado': '관찰된 결함',
+    'Ocorrência registrada': '등록된 발생 내용', 'Dados do scrap': '스크랩 데이터', 'Rastreabilidade automática': '자동 추적', 'Processado em': '처리 시간',
+    'Severidade': '심각도', 'Tipo': '유형', 'Novos': '신규', 'Críticos': '긴급', 'Lidos': '읽음', 'Enviados por e-mail': '이메일 발송',
+    'Alertas por dia': '일별 알림', 'Origem das notificações': '알림 출처', 'Evento': '이벤트', 'Descrição': '설명', 'Leitura': '열람 상태', 'Canal': '채널', 'Ver registros': '기록 보기',
+    'Marcar novos como lidos': '신규 알림 읽음 처리', 'Exportar': '내보내기', 'Versões': '버전', 'Envios': '발송', 'Novo relatório': '새 보고서', 'Exportar histórico': '이력 내보내기',
+    'Configuração': '구성', 'Comparação': '비교', 'Formato': '형식', 'Gerar PDF': 'PDF 생성', 'Gerar Excel': 'Excel 생성', 'Gerar e registrar versão': '버전 생성 및 등록',
+    'Registros justificados do período': '기간 내 사유 등록 기록', 'Preview': '미리보기', 'Início': '시작', 'Fim': '종료', 'Duração': '소요 시간', 'Recebidos': '수신', 'Válidos': '유효', 'Rejeitados': '거부',
+    'Execuções hoje': '오늘 실행', 'Concluídas': '완료', 'Parciais': '부분 완료', 'Falhas': '실패', 'Registros processados': '처리된 기록',
+    'Eventos hoje': '오늘 이벤트', 'Ações humanas': '사용자 작업', 'Eventos automáticos': '자동 이벤트', 'Eventos críticos': '긴급 이벤트', 'Ator': '수행자', 'Entidade': '엔터티',
+    'Negócio': '비즈니스', 'Dados': '데이터', 'Notificações': '알림', 'Acesso': '접근 권한', 'Integrações': '연동', 'Interface': '인터페이스', 'Salvar alterações': '변경 저장',
+    'Tema': '테마', 'Escolha a aparência da interface.': '인터페이스 모양을 선택하세요.', 'Claro': '라이트', 'Escuro': '다크', 'Sistema': '시스템', 'Idioma': '언어',
+    'Idioma exibido na interface do sistema.': '시스템 인터페이스에 표시할 언어입니다.', 'Português': '포르투갈어', 'Inglês': '영어', 'Coreano': '한국어',
+    'Seleção ilustrativa neste protótipo.': '이 프로토타입에서는 화면 예시용입니다.', 'Metas de Material Scrap': '자재 스크랩 목표', 'Regras de dados': '데이터 규칙',
+    'Padrões de relatório': '보고서 기본값', 'Nome': '이름', 'Grupo': '그룹', 'Usuário': '사용자', 'Perfil': '역할', 'Escopo': '범위',
+    'Modo TV': 'TV 모드', 'Abrir Modo TV': 'TV 모드 열기', 'Alternar tema': '테마 전환', 'Alterar idioma': '언어 변경'
+  }
+};
+
+Object.assign(i18nMessages.en, {
+  'Meta': 'Target', 'Meta anual: -15%': 'Annual target: -15%', 'US$ 3.805 acima do target': 'US$ 3,805 above target',
+  'Tela LCD': 'LCD panel', 'Moldura frontal': 'Front frame', 'Placa principal PCB': 'Main PCB',
+  'Áudio': 'Audio', 'Acumulado 2026 × PY': 'Cumulative 2026 × PY', 'Mesmo período PY': 'Same period PY',
+  'Agosto/2026': 'August/2026', 'Ago/2026': 'Aug/2026', '03–09 Ago': 'Aug 03–09',
+  '1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal': '1. LCD panel · 2. Main PCB · 3. Front frame',
+  'Data/Hora': 'Date/Time', 'Departamento / Linha': 'Department / Line', 'Produto / Família': 'Product / Family', 'Módulo': 'Component', 'Impacto': 'Impact',
+  'Risco profundo no painel': 'Deep scratch on panel', 'Trinca no ponto de fixação': 'Crack at mounting point', 'Falha no teste funcional': 'Functional test failure',
+  'Painel trincado por impacto': 'Impact-cracked panel', 'Deformação e desalinhamento': 'Deformation and misalignment', 'Conector danificado': 'Damaged connector',
+  'Esteira de montagem final': 'Final assembly conveyor', 'Posto de parafusamento': 'Screwdriving station', 'Montagem eletrônica': 'Electronics assembly',
+  'Abastecimento da linha': 'Line feeding', 'Prensa de encaixe': 'Press-fit station', 'Conexão do cabo flat': 'Flat cable connection',
+  'Pendente': 'Pending', 'Concluído': 'Completed', 'Parcial': 'Partial', 'Falha': 'Failed', 'Validado': 'Validated', 'Rejeitado': 'Rejected',
+  'Novo': 'New', 'Lido': 'Read', 'Arquivado': 'Archived', 'Crítico': 'Critical', 'Alto': 'High', 'Médio': 'Medium', 'Ativo': 'Active', 'Inativo': 'Inactive',
+  'Configurado': 'Configured', 'Operacional': 'Operational', 'Pausado': 'Paused', 'Informativo': 'Informational', 'Processando': 'Processing', 'Publicado': 'Published',
+  'E-mail e plataforma': 'Email and platform', 'Somente plataforma': 'Platform only', 'Plataforma': 'Platform', 'Imediato': 'Immediate',
+  'Notificações ainda não abertas': 'Notifications not opened yet', 'Nenhum registro encontrado.': 'No records found.', 'Nenhum Part Number no contexto atual.': 'No Part Number in the current context.',
+  'Nenhum registro para os filtros selecionados.': 'No records for the selected filters.', 'Nenhuma evidência adicionada.': 'No evidence added.',
+  'A justificativa pode ser revisada item a item.': 'The justification can be reviewed item by item.',
+  'Explique por que o item foi registrado como scrap. Os campos serão auditados.': 'Explain why the item was recorded as scrap. The fields are auditable.',
+  'Ative somente quando a justificativa simples não for suficiente para explicar o scrap.': 'Enable only when a simple justification is not enough to explain the scrap.',
+  'Fotos, documentos ou comentários vinculados ao registro.': 'Photos, documents or comments linked to the record.',
+  'Descreva o motivo deste registro de scrap...': 'Describe the reason for this scrap record...', 'Selecione...': 'Select...',
+  'Registre a causa validada...': 'Enter the validated cause...', 'Ação imediata': 'Immediate action', 'Prevenção de recorrência': 'Recurrence prevention',
+  'Este item exige análise de causa detalhada': 'This item requires detailed root cause analysis',
+  'Categoria da justificativa': 'Justification category', 'Máquina': 'Machine', 'Mão de obra': 'Labor', 'Processo': 'Process', 'Engenharia': 'Engineering', 'Fornecedor': 'Supplier', 'Outro': 'Other',
+  'Aumento de telas riscadas': 'Increase in scratched panels', 'Reincidência de objeto estranho': 'Foreign-object recurrence', 'Falhas no teste funcional': 'Functional test failures',
+  'Desvio de torque': 'Torque deviation', 'Painéis trincados': 'Cracked panels', 'Alto volume de scrap': 'High scrap volume',
+  'Objeto estranho na esteira': 'Foreign object on conveyor', 'Defeito de montagem': 'Assembly defect', 'Últimos 30 dias': 'Last 30 days',
+  'Resumo semanal': 'Weekly summary', 'Alertas críticos': 'Critical alerts', 'Falhas de ingestão': 'Ingestion failures', 'Qualidade': 'Quality', 'Gestores': 'Managers',
+  'Gerar relatório': 'Generate report', 'Conteúdo consolidado': 'Consolidated content', 'Indicadores e comparativo': 'Indicators and comparison',
+  'Scraps revisados e suas justificativas': 'Reviewed scrap records and their justifications', 'Observação do responsável': 'Owner note',
+  'Comentário opcional para contextualizar o período...': 'Optional comment to provide context for the period...',
+  'Somente scraps revisados podem compor o relatório.': 'Only reviewed scrap records can be included in the report.',
+  'Relatório de Material Scrap': 'Material Scrap Report', 'IF COST REVISADO': 'REVIEWED IF COST', 'Justificativas predominantes': 'Leading justifications',
+  'Revisões rastreáveis': 'Traceable reviews', 'Nenhum registro justificado no período.': 'No justified records in the period.',
+  'ID rastreável': 'Traceable ID', 'Gerado em': 'Generated at', 'Gerado por': 'Generated by', 'Scraps revisados': 'Reviewed scrap',
+  'Destinatário': 'Recipient', 'Solicitado em': 'Requested at', 'Tentativas': 'Attempts', 'Reenviar': 'Resend', 'Simular envio': 'Simulate delivery',
+  'Processo': 'Process', 'Disparadas pelo agendamento': 'Triggered by schedule', 'Reprocessamento disponível': 'Reprocessing available',
+  'Falhas por categoria — últimos 30 dias': 'Failures by category — last 30 days',
+  'A contingência só é liberada após uma tentativa de reprocessamento sem sucesso.': 'Contingency is released only after an unsuccessful reprocessing attempt.',
+  'Câmbio indisponível': 'Exchange rate unavailable', 'Arquivo inválido': 'Invalid file', 'Duplicidade': 'Duplicate record', 'Schema divergente': 'Schema mismatch',
+  'Buscar ID, usuário, entidade ou descrição...': 'Search ID, user, entity or description...', 'Humano': 'Human', 'Automático': 'Automated',
+  'Identificador': 'Identifier', 'Estado anterior': 'Previous state', 'Estado posterior': 'New state', 'Exportar eventos': 'Export events',
+  'Parâmetros usados nos comparativos de IF Cost.': 'Parameters used in IF Cost comparisons.', 'Baseline': 'Baseline', 'Meta de redução': 'Reduction target', 'Ano': 'Year',
+  'Componentes prioritários': 'Priority components', 'Parâmetros fictícios sujeitos à homologação.': 'Mock parameters subject to validation.',
+  'Contingência operacional': 'Operational contingency', 'Ingestão automática': 'Automatic ingestion', 'Importação contingencial': 'Contingency import',
+  'Relatório': 'Report', 'Enviado': 'Sent',
+  'Visão Executiva': 'Executive View', 'Dados atualizados': 'Data up to date', 'Meta 2026': '2026 target', 'Redução anual': 'Annual reduction',
+  'Evolução do IF Cost — 2026 × 2025 × Meta': 'IF Cost trend — 2026 × 2025 × Target', 'Top 3 componentes afetados': 'Top 3 affected components',
+  'unidades de scrap': 'scrap units', 'transações': 'transactions', 'alertas críticos': 'critical alerts',
+  'Pausar': 'Pause', 'Continuar': 'Resume', 'Rotação automática': 'Automatic rotation', 'Visão única': 'Single view', 'Intervalo': 'Interval', 'Tela cheia': 'Full screen', 'Sair': 'Exit',
+  'ONDE ESTAMOS PERDENDO DINHEIRO': 'WHERE WE ARE LOSING MONEY', 'Principais ofensores do período': 'Top offenders for the period',
+  'Onde estamos perdendo dinheiro': 'Where we are losing money',
+  'Pareto de defeitos por IF Cost': 'Defect Pareto by IF Cost', 'Linha mais crítica': 'Most critical line', '+22% vs média recente': '+22% vs recent average',
+  'Defeito mais crítico': 'Most critical defect', 'Risco no painel': 'Panel scratch', 'do IF Cost acumulado': 'of cumulative IF Cost',
+  'PROBLEMAS QUE EXIGEM AÇÃO': 'ISSUES REQUIRING ACTION', 'Ocorrências prioritárias': 'Priority occurrences', 'Situação das revisões': 'Review status',
+  'Problemas que exigem ação': 'Issues requiring action',
+  'Pendentes': 'Pending', 'Justificadas': 'Justified', 'Categorias predominantes': 'Leading categories', 'Outros': 'Others',
+  'COMPARATIVO E TENDÊNCIA': 'COMPARISON AND TREND', 'Evolução acumulada no ano': 'Cumulative yearly trend',
+  'Comparativo e tendência': 'Comparison and trend', 'Controles do Modo TV': 'TV Mode controls', 'Painel anterior': 'Previous panel',
+  'Pausar rotação': 'Pause rotation', 'Continuar rotação': 'Resume rotation', 'Próximo painel': 'Next panel', 'Sair do Modo TV': 'Exit TV Mode',
+  'Resultado acumulado': 'Cumulative result', 'Restante para meta': 'Remaining to target',
+  'Ver execução': 'View run', 'Explorar Part Number': 'Explore Part Number', 'Revisar registro': 'Review record',
+  'Evento notificado': 'Notified event', 'Alerta': 'Alert', 'Impacto estimado': 'Estimated impact', 'Área': 'Area',
+  'Registros relacionados': 'Related records', 'A justificativa e a revisão são feitas na Base de Scrap.': 'Justification and review are completed in the Scrap Database.',
+  'Histórico da notificação': 'Notification history', 'Condição detectada': 'Condition detected', 'Notificação enviada': 'Notification sent',
+  'Estado atual': 'Current state', 'Arquivar alerta': 'Archive alert', 'Ver registros de scrap': 'View scrap records',
+  'Agendada': 'Scheduled', 'Timeline automática': 'Automated timeline', 'Request automático iniciado': 'Automated request started',
+  'Arquivo localizado no GERP': 'File located in GERP', 'Arquivo recebido': 'File received', 'Validação estrutural': 'Structural validation',
+  'Normalização': 'Normalization', 'Conversão': 'Conversion', 'Taxa de câmbio não localizada': 'Exchange rate not found',
+  'Persistência': 'Persistence', 'Processamento concluído': 'Processing completed', 'Exceções': 'Exceptions',
+  'Registro': 'Record', 'Motivo': 'Reason', 'Etapa': 'Step', 'Taxa não localizada': 'Exchange rate not found',
+  'Registro já processado': 'Record already processed', 'Ignorado': 'Ignored', 'Ver registros processados': 'View processed records', 'Reprocessar': 'Reprocess',
+  'Integridade': 'Integrity', 'Eventos de auditoria são imutáveis e não podem ser excluídos pelo protótipo.': 'Audit events are immutable and cannot be deleted in the prototype.',
+  'Fechar': 'Close', 'Tudo certo': 'All set', 'Ação não concluída': 'Action not completed',
+  'Central de suporte simulada. Nenhum chamado real foi enviado.': 'Simulated support center. No real ticket was submitted.',
+  'O perfil do protótipo está em modo de demonstração.': 'The prototype profile is in demo mode.',
+  'Você tem novos alertas. Abra a notificação para ver os registros relacionados.': 'You have new alerts. Open the notification to view related records.',
+  'Arquivo fictício preparado para demonstração.': 'Mock file prepared for the demo.', 'Dados atualizados.': 'Data updated.',
+  'Filtros limpos.': 'Filters cleared.', 'Filtros avançados aplicados.': 'Advanced filters applied.', 'Selecione ao menos um registro.': 'Select at least one record.',
+  'Rascunho da revisão salvo.': 'Review draft saved.', 'Informe a categoria e a justificativa antes de concluir.': 'Enter the category and justification before completing the review.',
+  'Evidência adicionada à revisão.': 'Evidence added to the review.', 'Contingência concluída e auditada.': 'Contingency completed and audited.',
+  'Alerta arquivado.': 'Alert archived.', 'Relatório reenviado com sucesso.': 'Report resent successfully.', 'Envio simulado com sucesso.': 'Simulated delivery completed successfully.',
+  'A contingência ainda não está disponível.': 'Contingency is not available yet.', 'Reprocessamento iniciado.': 'Reprocessing started.',
+  'O reprocessamento falhou. A contingência foi liberada.': 'Reprocessing failed. Contingency was released.', 'Execução reprocessada com sucesso.': 'Run reprocessed successfully.',
+  'Alterações salvas durante esta sessão.': 'Changes saved for this session.', 'Preview atualizado.': 'Preview updated.',
+  'Processou dados recebidos do GERP': 'Processed data received from GERP', 'Gerou alerta por variação de IF Cost': 'Generated an alert due to IF Cost variation',
+  'Abriu registros relacionados pelo alerta': 'Opened records related to the alert', 'Justificou registro de scrap': 'Justified scrap record',
+  'Registrou relatório com scraps revisados': 'Registered report with reviewed scraps', 'Persistiu lote': 'Persisted batch',
+  'Validou transação': 'Validated transaction', 'Atualizou alerta': 'Updated alert', 'Consultou relatório': 'Viewed report',
+  'Aplicou taxa de câmbio': 'Applied exchange rate', 'Recebido': 'Received', 'Validando': 'Validating', 'Inexistente': 'Nonexistent', 'Rascunho': 'Draft',
+  'Analista': 'Analyst', 'Qualidade': 'Quality', 'Gestor': 'Manager', 'Todas as divisões': 'All divisions',
+  'Operação SMT': 'SMT Operations', 'Operação': 'Operations', 'Consulta TV': 'TV Viewer', 'Consulta': 'Viewer',
+  'HE / Qualidade': 'HE / Quality',
+  'Sujeito à homologação': 'Subject to validation', 'Contingência pós-falha': 'Post-failure contingency',
+  'Liberada apenas por uma execução cujo reprocessamento também falhou.': 'Released only for a run whose reprocessing also failed.',
+  'Validação obrigatória': 'Required validation', 'Valida o arquivo antes da recuperação.': 'Validates the file before recovery.',
+  'Preferências aplicadas a novos relatórios.': 'Preferences applied to new reports.', 'Frequência padrão': 'Default frequency', 'Sem comparação': 'No comparison',
+  'Última atualização:': 'Last update:', 'Banco': 'Database', 'Cotação': 'Exchange rate', 'Relatórios': 'Reports',
+  'Claro': 'Light', 'Escuro': 'Dark', 'Sistema': 'System', 'Escolha a aparência da interface.': 'Choose the interface appearance.',
+  'Idioma exibido na interface do sistema.': 'Language displayed in the system interface.',
+  'O que é IF Cost?': 'What is IF Cost?',
+  'Aumento de telas riscadas associado a objeto metálico encontrado na esteira': 'Increase in scratched panels associated with a metal object found on the conveyor',
+  'Um prego solto caiu na esteira e entrou em contato com a tela durante o transporte.': 'A loose nail fell onto the conveyor and contacted the panel during transport.',
+  'O parafuso foi aplicado com torque acima do especificado e trincou a moldura.': 'The screw was tightened above the specified torque and cracked the frame.',
+  'A placa apresentou falha após manuseio sem proteção eletrostática adequada.': 'The board failed after handling without proper electrostatic protection.',
+  'A tela escorregou do dispositivo de movimentação durante o abastecimento.': 'The panel slipped from the handling device during line feeding.',
+  'A moldura entrou desalinhada no dispositivo e foi deformada durante o encaixe.': 'The frame entered the fixture misaligned and was deformed during fitting.',
+  'O cabo flat foi inserido inclinado e danificou os contatos do conector da placa.': 'The flat cable was inserted at an angle and damaged the board connector contacts.',
+  'Falha no controle de objetos estranhos e na inspeção da esteira antes do início do turno.': 'Failure in foreign-object control and conveyor inspection before the shift.',
+  'Parafusadeira operando com parâmetro de torque incorreto.': 'Screwdriver operating with an incorrect torque setting.',
+  'Pulseira ESD desconectada durante o manuseio da placa.': 'ESD wrist strap disconnected while handling the board.',
+  'Posicionamento incompleto da tela no suporte de transporte.': 'Panel not fully positioned in the transport support.',
+  'Guia lateral do dispositivo estava com folga acima do limite.': 'The fixture side guide had clearance above the limit.',
+  'Ausência de guia para garantir o ângulo correto de inserção.': 'No guide was available to ensure the correct insertion angle.',
+  'Parar a esteira, remover o objeto e segregar as telas que passaram pelo trecho.': 'Stop the conveyor, remove the object and segregate panels that passed through the section.',
+  'Implantar inspeção magnética e checklist de liberação da esteira.': 'Implement magnetic inspection and a conveyor release checklist.',
+  'É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.': 'It is the cost of internal production losses. Each record uses the local scrap value converted to USD at the applicable exchange rate. The ranking totals this cost by component from highest to lowest.',
+  'Como o IF Cost é calculado': 'How IF Cost is calculated', 'Previous Year': 'Previous Year'
+});
+
+Object.assign(i18nMessages.ko, {
+  'Meta': '목표', 'Meta anual: -15%': '연간 목표: -15%', 'US$ 3.805 acima do target': '목표보다 US$ 3,805 초과',
+  'Tela LCD': 'LCD 패널', 'Moldura frontal': '전면 프레임', 'Placa principal PCB': '메인 PCB',
+  'Áudio': '오디오', 'Acumulado 2026 × PY': '2026년 누적 × PY', 'Mesmo período PY': 'PY 동일 기간',
+  'Agosto/2026': '2026년 8월', 'Ago/2026': '2026년 8월', '03–09 Ago': '8월 3–9일',
+  '1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal': '1. LCD 패널 · 2. 메인 PCB · 3. 전면 프레임',
+  'Data/Hora': '날짜/시간', 'Departamento / Linha': '부서 / 라인', 'Produto / Família': '제품 / 제품군', 'Módulo': '부품', 'Impacto': '영향',
+  'Risco profundo no painel': '패널 깊은 긁힘', 'Trinca no ponto de fixação': '체결부 균열', 'Falha no teste funcional': '기능 검사 실패',
+  'Painel trincado por impacto': '충격으로 인한 패널 균열', 'Deformação e desalinhamento': '변형 및 정렬 불량', 'Conector danificado': '커넥터 손상',
+  'Esteira de montagem final': '최종 조립 컨베이어', 'Posto de parafusamento': '나사 체결 공정', 'Montagem eletrônica': '전자 조립',
+  'Abastecimento da linha': '라인 자재 공급', 'Prensa de encaixe': '압입 공정', 'Conexão do cabo flat': '플랫 케이블 연결',
+  'Pendente': '대기', 'Concluído': '완료', 'Parcial': '부분 완료', 'Falha': '실패', 'Validado': '검증 완료', 'Rejeitado': '거부',
+  'Novo': '신규', 'Lido': '읽음', 'Arquivado': '보관됨', 'Crítico': '긴급', 'Alto': '높음', 'Médio': '중간', 'Ativo': '활성', 'Inativo': '비활성',
+  'Configurado': '설정됨', 'Operacional': '정상 운영', 'Pausado': '일시 중지', 'Informativo': '정보', 'Processando': '처리 중', 'Publicado': '게시됨',
+  'E-mail e plataforma': '이메일 및 플랫폼', 'Somente plataforma': '플랫폼만', 'Plataforma': '플랫폼', 'Imediato': '즉시',
+  'Notificações ainda não abertas': '아직 열지 않은 알림', 'Nenhum registro encontrado.': '기록이 없습니다.', 'Nenhum Part Number no contexto atual.': '현재 조건에 해당하는 부품 번호가 없습니다.',
+  'Nenhum registro para os filtros selecionados.': '선택한 필터에 해당하는 기록이 없습니다.', 'Nenhuma evidência adicionada.': '추가된 증빙이 없습니다.',
+  'A justificativa pode ser revisada item a item.': '각 항목별로 사유를 검토할 수 있습니다.',
+  'Explique por que o item foi registrado como scrap. Os campos serão auditados.': '해당 항목이 스크랩으로 등록된 이유를 입력하세요. 모든 필드는 감사 대상입니다.',
+  'Ative somente quando a justificativa simples não for suficiente para explicar o scrap.': '단순 사유만으로 스크랩을 설명하기 어려운 경우에만 활성화하세요.',
+  'Fotos, documentos ou comentários vinculados ao registro.': '기록에 연결된 사진, 문서 또는 의견입니다.',
+  'Descreva o motivo deste registro de scrap...': '이 스크랩 기록의 사유를 입력하세요...', 'Selecione...': '선택...',
+  'Registre a causa validada...': '확인된 원인을 입력하세요...', 'Ação imediata': '즉시 조치', 'Prevenção de recorrência': '재발 방지',
+  'Categoria da justificativa': '사유 분류', 'Máquina': '설비', 'Mão de obra': '작업자', 'Processo': '공정', 'Engenharia': '엔지니어링', 'Fornecedor': '공급업체', 'Outro': '기타',
+  'Aumento de telas riscadas': '패널 긁힘 증가', 'Reincidência de objeto estranho': '이물 재발', 'Falhas no teste funcional': '기능 검사 실패',
+  'Desvio de torque': '토크 편차', 'Painéis trincados': '패널 균열', 'Alto volume de scrap': '스크랩 수량 과다',
+  'Objeto estranho na esteira': '컨베이어 이물', 'Defeito de montagem': '조립 불량', 'Últimos 30 dias': '최근 30일',
+  'Resumo semanal': '주간 요약', 'Alertas críticos': '긴급 알림', 'Falhas de ingestão': '데이터 수집 실패', 'Qualidade': '품질', 'Gestores': '관리자',
+  'Conteúdo consolidado': '통합 내용', 'Indicadores e comparativo': '지표 및 비교', 'Scraps revisados e suas justificativas': '검토된 스크랩과 사유',
+  'Observação do responsável': '담당자 메모', 'Comentário opcional para contextualizar o período...': '기간 설명을 위한 선택 메모...',
+  'Somente scraps revisados podem compor o relatório.': '검토된 스크랩만 보고서에 포함할 수 있습니다.',
+  'Relatório de Material Scrap': '자재 스크랩 보고서', 'IF COST REVISADO': '검토된 IF COST', 'Justificativas predominantes': '주요 사유',
+  'Revisões rastreáveis': '추적 가능한 검토', 'Nenhum registro justificado no período.': '해당 기간에 사유 등록된 기록이 없습니다.',
+  'ID rastreável': '추적 ID', 'Gerado em': '생성 시간', 'Gerado por': '생성자', 'Scraps revisados': '검토된 스크랩',
+  'Destinatário': '수신자', 'Solicitado em': '요청 시간', 'Tentativas': '시도 횟수', 'Reenviar': '재전송', 'Simular envio': '발송 시뮬레이션',
+  'Processo': '프로세스', 'Disparadas pelo agendamento': '예약 실행', 'Reprocessamento disponível': '재처리 가능',
+  'Falhas por categoria — últimos 30 dias': '유형별 실패 — 최근 30일',
+  'A contingência só é liberada após uma tentativa de reprocessamento sem sucesso.': '재처리 시도가 실패한 후에만 비상 처리를 사용할 수 있습니다.',
+  'Câmbio indisponível': '환율 없음', 'Arquivo inválido': '잘못된 파일', 'Duplicidade': '중복', 'Schema divergente': '스키마 불일치',
+  'Buscar ID, usuário, entidade ou descrição...': 'ID, 사용자, 엔터티 또는 설명 검색...', 'Humano': '사용자', 'Automático': '자동',
+  'Identificador': '식별자', 'Estado anterior': '이전 상태', 'Estado posterior': '변경 상태', 'Exportar eventos': '이벤트 내보내기',
+  'Parâmetros usados nos comparativos de IF Cost.': 'IF Cost 비교에 사용하는 매개변수입니다.', 'Meta de redução': '감소 목표', 'Ano': '연도',
+  'Componentes prioritários': '우선 관리 부품', 'Parâmetros fictícios sujeitos à homologação.': '검증이 필요한 예시 매개변수입니다.',
+  'Contingência operacional': '운영 비상 처리', 'Ingestão automática': '자동 수집', 'Importação contingencial': '비상 가져오기',
+  'Relatório': '보고서', 'Enviado': '전송됨',
+  'Visão Executiva': '경영진 보기', 'Dados atualizados': '최신 데이터', 'Meta 2026': '2026년 목표', 'Redução anual': '연간 감소율',
+  'Evolução do IF Cost — 2026 × 2025 × Meta': 'IF Cost 추이 — 2026 × 2025 × 목표', 'Top 3 componentes afetados': '영향이 큰 부품 TOP 3',
+  'unidades de scrap': '스크랩 수량', 'transações': '거래', 'alertas críticos': '긴급 알림',
+  'Pausar': '일시 정지', 'Continuar': '계속', 'Rotação automática': '자동 전환', 'Visão única': '단일 보기', 'Intervalo': '전환 간격', 'Tela cheia': '전체 화면', 'Sair': '나가기',
+  'ONDE ESTAMOS PERDENDO DINHEIRO': '비용 손실이 발생하는 영역', 'Principais ofensores do período': '기간별 주요 손실 요인',
+  'Onde estamos perdendo dinheiro': '비용 손실이 발생하는 영역',
+  'Pareto de defeitos por IF Cost': 'IF Cost 기준 불량 파레토', 'Linha mais crítica': '가장 심각한 라인', '+22% vs média recente': '최근 평균 대비 +22%',
+  'Defeito mais crítico': '가장 심각한 불량', 'Risco no painel': '패널 긁힘', 'do IF Cost acumulado': '누적 IF Cost 중',
+  'PROBLEMAS QUE EXIGEM AÇÃO': '조치가 필요한 문제', 'Ocorrências prioritárias': '우선 처리 발생 건', 'Situação das revisões': '검토 현황',
+  'Problemas que exigem ação': '조치가 필요한 문제',
+  'Pendentes': '대기', 'Justificadas': '소명 완료', 'Categorias predominantes': '주요 분류', 'Outros': '기타',
+  'COMPARATIVO E TENDÊNCIA': '비교 및 추세', 'Evolução acumulada no ano': '연간 누적 추이',
+  'Comparativo e tendência': '비교 및 추세', 'Controles do Modo TV': 'TV 모드 제어', 'Painel anterior': '이전 패널',
+  'Pausar rotação': '자동 전환 일시 정지', 'Continuar rotação': '자동 전환 계속', 'Próximo painel': '다음 패널', 'Sair do Modo TV': 'TV 모드 나가기',
+  'Resultado acumulado': '누적 결과', 'Restante para meta': '목표까지 남은 값',
+  'Ver execução': '실행 보기', 'Explorar Part Number': 'Part Number 탐색', 'Revisar registro': '레코드 검토',
+  'Evento notificado': '통지된 이벤트', 'Alerta': '알림', 'Impacto estimado': '예상 영향', 'Área': '영역',
+  'Registros relacionados': '관련 레코드', 'A justificativa e a revisão são feitas na Base de Scrap.': '소명과 검토는 스크랩 데이터베이스에서 진행합니다.',
+  'Histórico da notificação': '알림 이력', 'Condição detectada': '감지 조건', 'Notificação enviada': '알림 전송',
+  'Estado atual': '현재 상태', 'Arquivar alerta': '알림 보관', 'Ver registros de scrap': '스크랩 레코드 보기',
+  'Agendada': '예약됨', 'Timeline automática': '자동 타임라인', 'Request automático iniciado': '자동 요청 시작',
+  'Arquivo localizado no GERP': 'GERP에서 파일 확인', 'Arquivo recebido': '파일 수신', 'Validação estrutural': '구조 검증',
+  'Normalização': '정규화', 'Conversão': '변환', 'Taxa de câmbio não localizada': '환율을 찾을 수 없음',
+  'Persistência': '저장', 'Processamento concluído': '처리 완료', 'Exceções': '예외',
+  'Registro': '레코드', 'Motivo': '사유', 'Etapa': '단계', 'Taxa não localizada': '환율을 찾을 수 없음',
+  'Registro já processado': '이미 처리된 레코드', 'Ignorado': '무시됨', 'Ver registros processados': '처리된 레코드 보기', 'Reprocessar': '재처리',
+  'Integridade': '무결성', 'Eventos de auditoria são imutáveis e não podem ser excluídos pelo protótipo.': '감사 이벤트는 변경할 수 없으며 프로토타입에서 삭제할 수 없습니다.',
+  'Fechar': '닫기', 'Tudo certo': '완료', 'Ação não concluída': '작업을 완료하지 못함',
+  'Central de suporte simulada. Nenhum chamado real foi enviado.': '지원 센터 시뮬레이션입니다. 실제 문의는 전송되지 않았습니다.',
+  'O perfil do protótipo está em modo de demonstração.': '프로토타입 프로필은 데모 모드입니다.',
+  'Você tem novos alertas. Abra a notificação para ver os registros relacionados.': '새 알림이 있습니다. 관련 레코드를 보려면 알림을 여세요.',
+  'Arquivo fictício preparado para demonstração.': '데모용 예시 파일이 준비되었습니다.', 'Dados atualizados.': '데이터가 업데이트되었습니다.',
+  'Filtros limpos.': '필터가 초기화되었습니다.', 'Filtros avançados aplicados.': '고급 필터가 적용되었습니다.', 'Selecione ao menos um registro.': '레코드를 하나 이상 선택하세요.',
+  'Rascunho da revisão salvo.': '검토 초안이 저장되었습니다.', 'Informe a categoria e a justificativa antes de concluir.': '검토를 완료하기 전에 분류와 소명 내용을 입력하세요.',
+  'Evidência adicionada à revisão.': '검토에 증빙이 추가되었습니다.', 'Contingência concluída e auditada.': '비상 처리가 완료되고 감사 기록에 남았습니다.',
+  'Alerta arquivado.': '알림이 보관되었습니다.', 'Relatório reenviado com sucesso.': '보고서를 다시 전송했습니다.', 'Envio simulado com sucesso.': '모의 전송이 완료되었습니다.',
+  'A contingência ainda não está disponível.': '비상 처리를 아직 사용할 수 없습니다.', 'Reprocessamento iniciado.': '재처리가 시작되었습니다.',
+  'O reprocessamento falhou. A contingência foi liberada.': '재처리에 실패하여 비상 처리가 활성화되었습니다.', 'Execução reprocessada com sucesso.': '실행을 성공적으로 재처리했습니다.',
+  'Alterações salvas durante esta sessão.': '이 세션의 변경 사항이 저장되었습니다.', 'Preview atualizado.': '미리보기가 업데이트되었습니다.',
+  'Processou dados recebidos do GERP': 'GERP 수신 데이터를 처리함', 'Gerou alerta por variação de IF Cost': 'IF Cost 변동으로 알림을 생성함',
+  'Abriu registros relacionados pelo alerta': '알림 관련 레코드를 열람함', 'Justificou registro de scrap': '스크랩 레코드를 소명함',
+  'Registrou relatório com scraps revisados': '검토된 스크랩 보고서를 등록함', 'Persistiu lote': '배치를 저장함',
+  'Validou transação': '거래를 검증함', 'Atualizou alerta': '알림을 업데이트함', 'Consultou relatório': '보고서를 조회함',
+  'Aplicou taxa de câmbio': '환율을 적용함', 'Recebido': '수신됨', 'Validando': '검증 중', 'Inexistente': '없음', 'Rascunho': '초안',
+  'Analista': '분석가', 'Qualidade': '품질', 'Gestor': '관리자', 'Todas as divisões': '모든 사업부',
+  'Operação SMT': 'SMT 운영', 'Operação': '운영', 'Consulta TV': 'TV 조회 사용자', 'Consulta': '조회 사용자',
+  'HE / Qualidade': 'HE / 품질',
+  'Sujeito à homologação': '검증 필요', 'Contingência pós-falha': '실패 후 비상 처리',
+  'Liberada apenas por uma execução cujo reprocessamento também falhou.': '재처리도 실패한 실행에만 허용됩니다.',
+  'Validação obrigatória': '필수 검증', 'Valida o arquivo antes da recuperação.': '복구 전에 파일을 검증합니다.',
+  'Preferências aplicadas a novos relatórios.': '새 보고서에 적용되는 기본 설정입니다.', 'Frequência padrão': '기본 주기', 'Sem comparação': '비교 없음',
+  'Última atualização:': '마지막 업데이트:', 'Banco': '데이터베이스', 'Cotação': '환율',
+  'O que é IF Cost?': 'IF Cost란?',
+  'Aumento de telas riscadas associado a objeto metálico encontrado na esteira': '컨베이어에서 발견된 금속 이물과 관련된 패널 긁힘 증가',
+  'Um prego solto caiu na esteira e entrou em contato com a tela durante o transporte.': '느슨한 못이 컨베이어에 떨어져 운반 중 패널과 접촉했습니다.',
+  'O parafuso foi aplicado com torque acima do especificado e trincou a moldura.': '규정 이상의 토크로 나사를 체결하여 프레임에 균열이 발생했습니다.',
+  'A placa apresentou falha após manuseio sem proteção eletrostática adequada.': '적절한 정전기 보호 없이 취급한 후 보드에 고장이 발생했습니다.',
+  'A tela escorregou do dispositivo de movimentação durante o abastecimento.': '라인 공급 중 패널이 운반 장치에서 미끄러졌습니다.',
+  'A moldura entrou desalinhada no dispositivo e foi deformada durante o encaixe.': '프레임이 지그에 잘못 정렬되어 결합 중 변형되었습니다.',
+  'O cabo flat foi inserido inclinado e danificou os contatos do conector da placa.': '플랫 케이블을 기울여 삽입하여 보드 커넥터 접점이 손상되었습니다.',
+  'Falha no controle de objetos estranhos e na inspeção da esteira antes do início do turno.': '교대 시작 전 이물 관리 및 컨베이어 점검이 누락되었습니다.',
+  'Parafusadeira operando com parâmetro de torque incorreto.': '전동 드라이버의 토크 설정이 잘못되었습니다.',
+  'Pulseira ESD desconectada durante o manuseio da placa.': '보드 취급 중 ESD 손목 밴드가 분리되었습니다.',
+  'Posicionamento incompleto da tela no suporte de transporte.': '패널이 운반 지지대에 완전히 안착되지 않았습니다.',
+  'Guia lateral do dispositivo estava com folga acima do limite.': '지그 측면 가이드의 유격이 기준을 초과했습니다.',
+  'Ausência de guia para garantir o ângulo correto de inserção.': '올바른 삽입 각도를 보장하는 가이드가 없었습니다.',
+  'Parar a esteira, remover o objeto e segregar as telas que passaram pelo trecho.': '컨베이어를 정지하고 이물을 제거한 뒤 해당 구간을 통과한 패널을 격리합니다.',
+  'Implantar inspeção magnética e checklist de liberação da esteira.': '자기 검사와 컨베이어 가동 승인 체크리스트를 도입합니다.',
+  'É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.': '생산 내부 손실 비용입니다. 각 기록은 스크랩의 현지 금액을 적용 환율로 USD로 환산합니다. 순위는 부품별 비용 합계를 큰 순서대로 표시합니다.',
+  'Como o IF Cost é calculado': 'IF Cost 계산 방식'
+});
+
+const i18nTextSources = new WeakMap();
+const i18nAttributeSources = new WeakMap();
+
+function translateDynamicText(text, locale) {
+  if (locale === 'pt-BR') return text;
+  const rules = locale === 'en' ? [
+    [/^(\d+) transações$/, '$1 transactions'], [/^(\d+) registros$/, '$1 records'], [/^(\d+) alertas$/, '$1 alerts'], [/^(\d+) unidades$/, '$1 units'], [/^(\d+) ocorrências$/, '$1 occurrences'],
+    [/^(\d+) un\.$/, '$1 units'], [/^(\d+) un\. · (\d+) registros$/, '$1 units · $2 records'], [/^(\d+) registros · (\d+) un\.$/, '$1 records · $2 units'],
+    [/^(\d+) registros · página (\d+) de (\d+)$/, '$1 records · page $2 of $3'], [/^(\d+) incluídos$/, '$1 included'], [/^(\d+) scraps incluídos$/, '$1 scrap records included'],
+    [/^Evidências \((\d+)\)$/, 'Evidence ($1)'], [/^(\d+) registro selecionado$/, '$1 record selected'], [/^(\d+) registros selecionados$/, '$1 records selected'],
+    [/^Concluir (\d+) revisão$/, 'Complete $1 review'], [/^Concluir (\d+) revisões$/, 'Complete $1 reviews'],
+    [/^Atualizado às (.+)$/, 'Updated at $1'], [/^Última atualização: (.+)$/, 'Last update: $1'], [/^Próxima execução: (.+)$/, 'Next run: $1'],
+    [/^(\d+) Ago (\d{4}) · Atualizado às (.+)$/, 'Aug $1, $2 · Updated at $3'], [/^Atualizado (.+) · Próxima atualização (.+)$/, 'Updated $1 · Next update $2'],
+    [/^Etapa (\d+) registrada$/, 'Step $1 logged'], [/^(\d+) registros de scrap originaram esta notificação\.$/, '$1 scrap records triggered this notification.'],
+    [/^Status: (.+)$/, (_, status) => `Status: ${i18nMessages.en[status] || status}`],
+    [/^Exploração aprofundada em (.+)\.$/, 'Detailed exploration of $1.'], [/^(\d+) alertas marcados como lidos\.$/, '$1 alerts marked as read.'],
+    [/^(\d+) registros? justificados? e disponíveis? para relatório\.$/, '$1 justified record(s) available for the report.'],
+    [/^Relatório (.+) registrado com (\d+) scrap\(s\) revisado\(s\)\.$/, 'Report $1 registered with $2 reviewed scrap record(s).'],
+    [/^Detalhes da versão (.+) carregados\.$/, 'Version $1 details loaded.'],
+    [/^(.+) atualizado para (.+)\.$/, (_, label, value) => `${i18nMessages.en[label] || label} updated to ${i18nMessages.en[value] || value}.`],
+    [/^Semana (W\d+) · (.+)$/, 'Week $1 · $2'],
+    [/^US\$ ([\d.,]+) abaixo$/, 'US$ $1 below'], [/^US\$ ([\d.,]+) acima$/, 'US$ $1 above'], [/^US\$ ([\d.,]+) acima do target$/, 'US$ $1 above target'],
+    [/^(.+) ([↑↓])$/, (_, label, arrow) => `${i18nMessages.en[label] || label} ${arrow}`],
+    [/^(.+) detectado acima do limite configurado$/, (_, eventName) => `${i18nMessages.en[eventName] || eventName} detected above the configured threshold`],
+    [/^(.+): ocorrência acima do limite configurado no posto (.+)$/, (_, defect, station) => `${i18nMessages.en[defect] || defect}: occurrence above the configured threshold at ${i18nMessages.en[station] || station}`]
+  ] : [
+    [/^(\d+) transações$/, '$1건의 거래'], [/^(\d+) registros$/, '$1건의 기록'], [/^(\d+) alertas$/, '$1개의 알림'], [/^(\d+) unidades$/, '$1개'], [/^(\d+) ocorrências$/, '$1건'],
+    [/^(\d+) un\.$/, '$1개'], [/^(\d+) un\. · (\d+) registros$/, '$1개 · $2건'], [/^(\d+) registros · (\d+) un\.$/, '$1건 · $2개'],
+    [/^(\d+) registros · página (\d+) de (\d+)$/, '$1건 · $2 / $3 페이지'], [/^(\d+) incluídos$/, '$1건 포함'], [/^(\d+) scraps incluídos$/, '스크랩 $1건 포함'],
+    [/^Evidências \((\d+)\)$/, '증빙 ($1)'], [/^(\d+) registro selecionado$/, '$1건 선택'], [/^(\d+) registros selecionados$/, '$1건 선택'],
+    [/^Concluir (\d+) revisão$/, '검토 $1건 완료'], [/^Concluir (\d+) revisões$/, '검토 $1건 완료'],
+    [/^Atualizado às (.+)$/, '$1 업데이트'], [/^Última atualização: (.+)$/, '마지막 업데이트: $1'], [/^Próxima execução: (.+)$/, '다음 실행: $1'],
+    [/^(\d+) Ago (\d{4}) · Atualizado às (.+)$/, '$2년 8월 $1일 · $3 업데이트'], [/^Atualizado (.+) · Próxima atualização (.+)$/, '$1 업데이트 · 다음 업데이트 $2'],
+    [/^Etapa (\d+) registrada$/, '$1단계 기록'], [/^(\d+) registros de scrap originaram esta notificação\.$/, '스크랩 레코드 $1건으로 이 알림이 생성되었습니다.'],
+    [/^Status: (.+)$/, (_, status) => `상태: ${i18nMessages.ko[status] || status}`],
+    [/^Exploração aprofundada em (.+)\.$/, '$1 상세 탐색을 열었습니다.'], [/^(\d+) alertas marcados como lidos\.$/, '알림 $1개를 읽음으로 표시했습니다.'],
+    [/^(\d+) registros? justificados? e disponíveis? para relatório\.$/, '소명 완료 레코드 $1건을 보고서에 사용할 수 있습니다.'],
+    [/^Relatório (.+) registrado com (\d+) scrap\(s\) revisado\(s\)\.$/, '보고서 $1에 검토된 스크랩 $2건을 등록했습니다.'],
+    [/^Detalhes da versão (.+) carregados\.$/, '버전 $1 상세 정보를 불러왔습니다.'],
+    [/^(.+) atualizado para (.+)\.$/, (_, label, value) => `${i18nMessages.ko[label] || label}을(를) ${i18nMessages.ko[value] || value}(으)로 변경했습니다.`],
+    [/^Semana (W\d+) · (.+)$/, '$1주 · $2'],
+    [/^US\$ ([\d.,]+) abaixo$/, 'US$ $1 절감'], [/^US\$ ([\d.,]+) acima$/, 'US$ $1 초과'], [/^US\$ ([\d.,]+) acima do target$/, '목표보다 US$ $1 초과'],
+    [/^(.+) ([↑↓])$/, (_, label, arrow) => `${i18nMessages.ko[label] || label} ${arrow}`],
+    [/^(.+) detectado acima do limite configurado$/, (_, eventName) => `${i18nMessages.ko[eventName] || eventName}: 설정 임계값 초과 감지`],
+    [/^(.+): ocorrência acima do limite configurado no posto (.+)$/, (_, defect, station) => `${i18nMessages.ko[station] || station} 공정에서 ${i18nMessages.ko[defect] || defect} 발생 건이 설정 임계값을 초과했습니다`]
+  ];
+  return rules.reduce((value, [pattern, replacement]) => pattern.test(value) ? value.replace(pattern, replacement) : value, text);
+}
+
+function translateValue(value, locale = state.locale) {
+  const trimmed = value.trim();
+  if (!trimmed || locale === 'pt-BR') return value;
+  const translated = i18nMessages[locale]?.[trimmed] || translateDynamicText(trimmed, locale);
+  return value.replace(trimmed, translated);
+}
+
+function applyI18n(root = document) {
+  document.documentElement.lang = state.locale;
+  root.querySelectorAll?.('.report-analysis-list article small').forEach((element) => {
+    const parts = element.textContent.split(' · ');
+    if (parts.length >= 3) element.innerHTML = parts.map((part) => `<span>${part}</span>`).join(' · ');
+  });
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((node) => {
+    if (node.parentElement?.closest('script, style, svg, .language-select')) return;
+    if (!i18nTextSources.has(node)) i18nTextSources.set(node, node.nodeValue);
+    node.nodeValue = translateValue(i18nTextSources.get(node), state.locale);
+  });
+  root.querySelectorAll?.('[placeholder], [aria-label], [title]').forEach((element) => {
+    if (element.closest('.language-select')) return;
+    if (!i18nAttributeSources.has(element)) {
+      i18nAttributeSources.set(element, Object.fromEntries(['placeholder','aria-label','title'].filter((name) => element.hasAttribute(name)).map((name) => [name, element.getAttribute(name)])));
+    }
+    Object.entries(i18nAttributeSources.get(element)).forEach(([name, source]) => element.setAttribute(name, translateValue(source, state.locale)));
+  });
+  const reportPeriod = root.querySelector?.('#report-period');
+  if (reportPeriod) reportPeriod.value = translateValue(reportPeriod.value, state.locale);
+}
 
 function statusTone(status) {
   const s = String(status).toLowerCase();
@@ -246,7 +647,10 @@ function statusTone(status) {
 function badge(text, tone = statusTone(text)) { return `<span class="badge ${tone}">${text}</span>`; }
 function button(label, action, options = {}) { return `<button class="btn ${options.primary ? 'primary' : ''} ${options.small ? 'small' : ''}" type="button" data-action="${action}" ${options.id ? `data-id="${options.id}"` : ''}>${options.icon ? icon(options.icon) : ''}${label}</button>`; }
 function pageHeader(title, actions = '') { return `<header class="page-header"><h1 class="page-title">${title}</h1><div class="page-actions">${actions}</div></header>`; }
-function field(label, id, options, value = '') { return `<div class="field"><label for="${id}">${label}</label><select class="control" id="${id}" data-filter="${id}">${options.map((o) => `<option ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`; }
+function field(label, id, options, value = '') {
+  const optionLabels = { 'Acumulado 2026 vs 2025': 'Acumulado 2026 × PY', 'Mesmo período 2025': 'Mesmo período PY' };
+  return `<div class="field"><label for="${id}">${label}</label><select class="control" id="${id}" data-filter="${id}">${options.map((o) => `<option value="${o}" ${o === value ? 'selected' : ''}>${optionLabels[o] || o}</option>`).join('')}</select></div>`;
+}
 function kpiCard(label, value, detail = '', tone = '') { return `<article class="kpi-card ${tone}"><span class="kpi-label">${label}</span><strong class="kpi-value">${value}</strong>${detail ? `<span class="kpi-detail">${detail}</span>` : ''}</article>`; }
 function filtersPanel(fields, footer = '') { return `<section class="filter-panel" aria-label="Filtros"><div class="filters">${fields}</div>${footer ? `<div class="filter-footer">${footer}</div>` : ''}</section>`; }
 function tablePanel(title, headers, rows, options = {}) {
@@ -300,6 +704,8 @@ function renderShell() {
   $('.utility-button').innerHTML = `${icon('mail')}<span class="sidebar-copy">Ajuda e suporte</span>`;
   $('#sidebar-toggle').innerHTML = icon('sidebar'); $('#mobile-menu').innerHTML = icon('sidebar');
   $('[data-action="notifications"]').innerHTML = `${icon('bell')}<span class="notification-dot"></span>`;
+  $('.language-select-icon').innerHTML = icon('language');
+  $('#global-language').value = state.locale;
   $('#tv-mode-trigger').innerHTML = icon('tv');
   $('#tv-mode-trigger').hidden = state.route !== 'dashboard';
   $('[data-action="toggle-theme"]').innerHTML = icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon');
@@ -308,15 +714,30 @@ function renderShell() {
   $('#breadcrumb').innerHTML = `<span class="breadcrumb-item">${icon(current.icon)}<span class="breadcrumb-label">${current.label}</span></span>`;
 }
 
+const dashboardChartPresets = {
+  Acumulado: { title: 'Evolução acumulada do IF Cost', current: [8,17,28,42,60,83,108,130,154,181,207,236], previous: [12,25,42,62,81,99,124,152,183,212,245,280], target: 181 },
+  Diário: { title: 'Evolução diária do IF Cost', current: [8,9,11,14,18,23,25,22,24,27,26,29], previous: [12,13,17,20,19,18,25,28,31,29,33,35], target: 24 },
+  Semanal: { title: 'Evolução semanal do IF Cost', current: [41,48,44,52,47,56], previous: [46,52,55,58,61,64], target: 50 },
+  Mensal: { title: 'Evolução mensal do IF Cost', current: [168,174,161,184,176,169,181,184], previous: [188,201,194,211,205,198,216,212], target: 181 }
+};
+
 function renderDashboard() {
   const factor = state.dashboardFactor;
-  const total = model.transactions.reduce((sum, row) => sum + row.ifCost, 0);
-  const totalQty = model.transactions.reduce((sum, row) => sum + row.qty, 0);
-  const offenders = aggregateTransactions(model.transactions, 'module').slice(0, 3);
-  const fields = field('Período', 'dash-period', ['01/08/2026 — 12/08/2026', 'Últimos 7 dias', 'Agosto/2026']) + field('Visão', 'dash-view', ['Acumulado', 'Diário', 'Semanal', 'Mensal']) + field('Division', 'dash-division', ['Todas', 'HE', 'VS']) + field('Departamento', 'dash-department', ['Todos', ...departments]) + field('Linha', 'dash-line', ['Todas', ...lines]) + field('Família', 'dash-family', ['Todas', ...families]) + field('Material', 'dash-module', ['Todos', ...modules]);
-  const attention = model.transactions.filter((row) => row.ifCost > 1800).sort((a, b) => b.ifCost - a.ifCost).slice(0, 5).map((row, index) => `<tr><td>${row.date.slice(0,5)}</td><td>${row.department}</td><td>${row.line}</td><td>${row.family}</td><td>${row.product}</td><td><strong>${row.module}</strong><small class="cell-stack">${row.defect}</small></td><td class="number">${row.qty}</td><td class="number"><strong>${formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status==='Justificado'?'Ver revisão':'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('');
-  const offenderCards = offenders.map((item, index) => `<article class="offender-row"><span class="offender-rank">${index + 1}</span><div><strong>${item.label}</strong><small>${formatNumber(item.qty)} un. · ${item.count} registros</small><div class="bar-track"><i style="width:${item.value / offenders[0].value * 100}%"></i></div></div><b>${formatCurrency(item.value * factor, true)}</b><div class="table-actions">${button('Explorar na Base','dashboard-explore',{small:true,primary:true,id:item.label})}</div></article>`).join('');
-  return `<section class="page-stack">${pageHeader('Dashboard de Scrap', `${button('Atualizar','refresh-dashboard',{icon:'refresh'})}${button('Exportar dados','export-dashboard',{icon:'download'})}${button('Gerar relatório','go-reports',{icon:'report'})}`)}<section class="automation-banner">${icon('refresh')}<div><strong>Fluxo automatizado ativo</strong><span>GERP → processamento Hanaro → indicadores → investigação → relatório</span></div><small>Última execução concluída às 05:08</small></section>${filtersPanel(fields, `<span class="filter-note">Filtros atualizam indicadores e rankings</span><button class="link-button" data-action="clear-dashboard">Limpar filtros</button>`)}<section class="kpi-grid">${kpiCard('IF Cost acumulado', formatCurrency(total*factor), 'Ago/2026 · calculado automaticamente')}${kpiCard('Mesmo período 2025', formatCurrency(212300*factor), '↓ US$ 28.040')}${kpiCard('Redução YoY', formatPercentage(-13.2/factor), 'Meta anual: -15%', 'success')}${kpiCard('Gap para meta', `${(1.8*factor).toLocaleString('pt-BR',{maximumFractionDigits:1})} p.p.`, 'US$ 3.805 acima do target', 'danger')}${kpiCard('Scrap registrado', `${formatNumber(Math.round(totalQty*factor))} un.`, `${model.transactions.length} transações`)}</section><section class="content-grid"><article class="panel"><header class="panel-header"><div><h2>Evolução diária do IF Cost</h2><p class="panel-description">Comparativo automático 2026, 2025 e meta</p></div></header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">2026</span><span class="legend-key" style="--key:var(--chart-secondary)">2025</span><span class="legend-key" style="--key:var(--app-text-muted)">Meta</span></div>${lineChart([8,9,11,14,18,23,25,22,24,27,26,29].map(v=>v*factor),[12,13,17,20,19,18,25,28,31,29,33,35],24)}</article><article class="panel offender-panel"><header class="panel-header"><div><h2 class="metric-title">Top ofensores <span class="metric-help" tabindex="0" role="button" aria-label="Como o IF Cost é calculado">${icon('alert')}<span class="metric-tooltip" role="tooltip"><strong>O que é IF Cost?</strong> É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.</span></span> IF Cost</h2><p class="panel-description">Ponto de partida para investigação</p></div></header>${offenderCards}</article></section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Pareto de componentes</h2></header>${barList(aggregateTransactions(model.transactions,'partNumber').slice(0,5))}</article><article class="panel"><header class="panel-header"><h2>IF Cost por departamento</h2></header>${barList(aggregateTransactions(model.transactions,'department'))}</article></section>${tablePanel('Ocorrências que exigem atenção',[{label:'Data'},{label:'Departamento'},{label:'Linha'},{label:'Família'},{label:'Produto'},{label:'Componente'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Status'},{label:'Ações'}],attention)}</section>`;
+  const filters = state.dashboardFilters;
+  const dashboardRows = model.transactions.filter((row) =>
+    (filters.period !== 'Últimos 7 dias' || Number(row.date.slice(0, 2)) >= 6) &&
+    (filters.division === 'Todas' || row.division === filters.division) &&
+    (filters.department === 'Todos' || row.department === filters.department) &&
+    (filters.line === 'Todas' || row.line === filters.line) &&
+    (filters.family === 'Todas' || row.family === filters.family) &&
+    (filters.module === 'Todos' || row.module === filters.module));
+  const total = dashboardRows.reduce((sum, row) => sum + row.ifCost, 0);
+  const totalQty = dashboardRows.reduce((sum, row) => sum + row.qty, 0);
+  const offenders = aggregateTransactions(dashboardRows, 'module').slice(0, 3);
+  const fields = field('Período', 'dash-period', ['01/08/2026 — 12/08/2026', 'Últimos 7 dias', 'Agosto/2026'], filters.period) + field('Visão', 'dash-view', ['Acumulado', 'Diário', 'Semanal', 'Mensal'], filters.view) + field('Division', 'dash-division', ['Todas', 'HE', 'VS'], filters.division) + field('Departamento', 'dash-department', ['Todos', ...departments], filters.department) + field('Linha', 'dash-line', ['Todas', ...lines], filters.line) + field('Família', 'dash-family', ['Todas', ...families], filters.family) + field('Material', 'dash-module', ['Todos', ...modules], filters.module);
+  const attention = dashboardRows.filter((row) => row.ifCost > 1800).sort((a, b) => b.ifCost - a.ifCost).slice(0, 5).map((row) => `<tr><td>${row.date.slice(0,5)}</td><td>${row.department}</td><td>${row.line}</td><td>${row.family}</td><td>${row.product}</td><td><strong>${row.module}</strong><small class="cell-stack">${row.defect}</small></td><td class="number">${row.qty}</td><td class="number"><strong>${formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status==='Justificado'?'Ver revisão':'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('');
+  const offenderCards = offenders.length ? offenders.map((item, index) => `<article class="offender-row"><span class="offender-rank">${index + 1}</span><div><strong>${item.label}</strong><small>${formatNumber(item.qty)} un. · ${item.count} registros</small><div class="bar-track"><i style="width:${item.value / offenders[0].value * 100}%"></i></div></div><b>${formatCurrency(item.value * factor, true)}</b><div class="table-actions">${button('Explorar na Base','dashboard-explore',{small:true,primary:true,id:item.label})}</div></article>`).join('') : '<div class="empty-state compact">Nenhum registro para os filtros selecionados.</div>';
+  return `<section class="page-stack">${pageHeader('Dashboard de Scrap', `${button('Atualizar','refresh-dashboard',{icon:'refresh'})}${button('Exportar dados','export-dashboard',{icon:'download'})}${button('Gerar relatório','go-reports',{icon:'report'})}`)}<section class="automation-banner">${icon('refresh')}<div><strong>Fluxo automatizado ativo</strong><span>GERP → processamento Hanaro → indicadores → investigação → relatório</span></div><small>Última execução concluída às 05:08</small></section>${filtersPanel(fields, `<span class="filter-note">Filtros atualizam indicadores e rankings</span><button class="link-button" data-action="clear-dashboard">Limpar filtros</button>`)}<section class="kpi-grid">${kpiCard('IF Cost acumulado', formatCurrency(total*factor), filters.period)}${kpiCard('Mesmo período 2025', formatCurrency(212300*factor), '↓ US$ 28.040')}${kpiCard('Redução <span class="metric-tag" title="Previous Year">PY</span>', formatPercentage(-13.2/factor), 'Meta anual: -15%', 'success')}${kpiCard('Gap para meta', `${(1.8*factor).toLocaleString('pt-BR',{maximumFractionDigits:1})} p.p.`, 'US$ 3.805 acima do target', 'danger')}${kpiCard('Scrap registrado', `${formatNumber(Math.round(totalQty*factor))} un.`, `${dashboardRows.length} transações`)}</section><section class="content-grid"><article class="panel"><header class="panel-header"><div><h2>Evolução diária do IF Cost</h2><p class="panel-description">Comparativo automático 2026, 2025 e meta</p></div></header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">2026</span><span class="legend-key" style="--key:var(--chart-secondary)">2025</span><span class="legend-key" style="--key:var(--app-text-muted)">Meta</span></div>${lineChart([8,9,11,14,18,23,25,22,24,27,26,29].map(v=>v*factor),[12,13,17,20,19,18,25,28,31,29,33,35],24)}</article><article class="panel offender-panel"><header class="panel-header"><div><h2 class="metric-title">Top ofensores <span class="metric-help" tabindex="0" role="button" aria-label="Como o IF Cost é calculado">${icon('alert')}<span class="metric-tooltip" role="tooltip"><strong>O que é IF Cost?</strong> É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.</span></span> IF Cost</h2><p class="panel-description">Ponto de partida para investigação</p></div></header>${offenderCards}</article></section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Pareto de componentes</h2></header>${barList(aggregateTransactions(dashboardRows,'partNumber').slice(0,5))}</article><article class="panel"><header class="panel-header"><h2>IF Cost por departamento</h2></header>${barList(aggregateTransactions(dashboardRows,'department'))}</article></section>${tablePanel('Ocorrências que exigem atenção',[{label:'Data'},{label:'Departamento'},{label:'Linha'},{label:'Família'},{label:'Produto'},{label:'Componente'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Status'},{label:'Ações'}],attention)}</section>`;
 }
 
 function filteredTransactions() {
@@ -422,11 +843,11 @@ function renderSettings() {
   let content='';
   if(state.settingsTab==='negocio') content=`<article class="settings-card"><h2>Metas de Material Scrap</h2><p>Parâmetros usados nos comparativos de IF Cost.</p><div class="form-grid"><div class="field"><label>Baseline</label><input class="control" value="${model.settings.baseline}"></div><div class="field"><label>Meta de redução</label><input class="control" id="setting-target" value="${model.settings.target}%"></div><div class="field"><label>Ano</label><input class="control" value="${model.settings.year}"></div><div class="field"><span class="field-label">Escopo</span><div class="choice-group">${families.map(f=>`<button class="choice selected" data-action="toggle-choice">${f}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>Componentes prioritários</strong><p>1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal</p></div>${badge('Ativo')}</div></article>`;
   if(state.settingsTab==='dados') content=`<article class="settings-card"><h2>Regras de dados</h2><p>Parâmetros fictícios sujeitos à homologação.</p><div class="setting-row"><div><strong>Alias Codes</strong><p>${aliases.join(' · ')}</p></div>${badge('Sujeito à homologação','warning')}</div><div class="setting-row"><div><strong>Contingência pós-falha</strong><p>Liberada apenas por uma execução cujo reprocessamento também falhou.</p></div><button class="switch ${model.settings.upload?'on':''}" data-action="toggle-setting" data-key="upload" aria-label="Alternar contingência pós-falha"></button></div><div class="setting-row"><div><strong>Validação obrigatória</strong><p>Valida o arquivo antes da recuperação.</p></div><button class="switch ${model.settings.validation?'on':''}" data-action="toggle-setting" data-key="validation"></button></div></article>`;
-  if(state.settingsTab==='relatorios') content=`<article class="settings-card"><h2>Padrões de relatório</h2><p>Preferências aplicadas a novos relatórios.</p><div class="form-grid">${field('Frequência padrão','setting-frequency',['Semanal','Diário','Mensal'],model.settings.reportFrequency)+field('Visão','setting-view',['Acumulado','Mensal','Semanal'])+field('Comparação','setting-compare',['YoY','Sem comparação'])+field('Formato','setting-format',['PDF','XLSX'])}</div></article>`;
+  if(state.settingsTab==='relatorios') content=`<article class="settings-card"><h2>Padrões de relatório</h2><p>Preferências aplicadas a novos relatórios.</p><div class="form-grid">${field('Frequência padrão','setting-frequency',['Semanal','Diário','Mensal'],model.settings.reportFrequency)+field('Visão','setting-view',['Acumulado','Mensal','Semanal'])+field('Comparação <span class="metric-tag" title="Previous Year">PY</span>','setting-compare',['PY — Previous Year','Sem comparação'])+field('Formato','setting-format',['PDF','XLSX'])}</div></article>`;
   if(state.settingsTab==='notificacoes') content=tablePanel('',[{label:'Nome'},{label:'Grupo'},{label:'E-mail'},{label:'Tipo'},{label:'Status'}],[['Alertas críticos','Qualidade','qualidade@exemplo.local','Imediato','Ativo'],['Resumo semanal','Gestores','gestores@exemplo.local','Semanal','Ativo'],['Falhas de ingestão','Dados','dados@exemplo.local','Imediato','Pausado']].map(r=>`<tr>${r.map((v,i)=>`<td>${i===4?badge(v):v}</td>`).join('')}</tr>`).join(''));
   if(state.settingsTab==='acesso') content=tablePanel('',[{label:'Usuário'},{label:'Perfil'},{label:'Escopo'},{label:'Status'}],[['Marina França','Analista','HE / Qualidade','Ativo'],['Rafael Souza','Gestor','Todas as divisões','Ativo'],['Operação SMT','Operação','SMT','Ativo'],['Consulta TV','Consulta','TV','Inativo']].map(r=>`<tr>${r.map((v,i)=>`<td>${i===3?badge(v):v}</td>`).join('')}</tr>`).join(''));
   if(state.settingsTab==='integracoes') content=`<div class="settings-layout">${[['GERP','Configurado','12/08 05:00'],['Cotação','Operacional','12/08 00:05'],['Banco','Operacional','12/08 09:40'],['Relatórios','Operacional','12/08 08:54']].map(([n,s,d])=>`<article class="settings-card"><div class="setting-row" style="border:0;padding:0"><div><h2>${n}</h2><p>Última atualização: ${d}</p></div>${badge(s)}</div></article>`).join('')}</div>`;
-  if(state.settingsTab==='interface') content=`<div class="interface-settings-grid"><article class="settings-card"><h2>Tema</h2><p>Escolha a aparência da interface.</p><div class="theme-options">${[['light','Claro'],['dark','Escuro'],['system','Sistema']].map(([id,l])=>`<button class="theme-card ${document.documentElement.dataset.themePreference===id?'selected':''}" data-action="set-theme" data-id="${id}" data-theme-choice="${id}"><span class="theme-swatch"><i></i><i></i></span><strong>${l}</strong></button>`).join('')}</div></article><article class="settings-card"><h2>Idioma</h2><p>Idioma exibido na interface do sistema.</p><div class="language-options">${[['pt-BR','Português','PT'],['en','Inglês','EN'],['ko','Coreano','KO']].map(([id,label,code],index)=>`<button class="language-card ${index===0?'selected':''}" type="button" aria-pressed="${index===0}"><span>${code}</span><div><strong>${label}</strong><small>${id}</small></div>${index===0?icon('check'):''}</button>`).join('')}</div><small class="settings-note">Seleção ilustrativa neste protótipo.</small></article></div>`;
+  if(state.settingsTab==='interface') content=`<div class="interface-settings-grid"><article class="settings-card"><h2>Tema</h2><p>Escolha a aparência da interface.</p><div class="theme-options">${[['light','Claro'],['dark','Escuro'],['system','Sistema']].map(([id,l])=>`<button class="theme-card ${document.documentElement.dataset.themePreference===id?'selected':''}" data-action="set-theme" data-id="${id}" data-theme-choice="${id}"><span class="theme-swatch"><i></i><i></i></span><strong>${l}</strong></button>`).join('')}</div></article><article class="settings-card"><h2>Idioma</h2><p>Idioma exibido na interface do sistema.</p><label class="language-select settings-language-select"><span class="language-select-icon" aria-hidden="true">${icon('language')}</span><select id="settings-language" aria-label="Alterar idioma"><option value="pt-BR" ${state.locale==='pt-BR'?'selected':''}>Português</option><option value="en" ${state.locale==='en'?'selected':''}>English</option><option value="ko" ${state.locale==='ko'?'selected':''}>한국어</option></select></label></article></div>`;
   return `<section class="page-stack">${pageHeader('Configurações',button('Salvar alterações','save-settings',{primary:true,icon:'check'}))}${tabs}${content}</section>`;
 }
 
@@ -460,14 +881,28 @@ function removeRedundantHelperCopy() {
   }
 }
 
+function hydrateDashboardView() {
+  if (state.route !== 'dashboard') return;
+  const preset = dashboardChartPresets[state.dashboardFilters.view] || dashboardChartPresets.Acumulado;
+  const chartTitle = $('.content-grid .panel h2', $('#page-content'));
+  if (chartTitle) chartTitle.textContent = preset.title;
+  const previousYearLabel = $$('.kpi-label', $('#page-content')).find((label) => label.textContent.trim() === 'Mesmo período 2025');
+  if (previousYearLabel) previousYearLabel.innerHTML = 'Mesmo período <span class="metric-tag" title="Previous Year">PY</span>';
+  if (pendingCharts[0]) {
+    pendingCharts[0].valuesA = preset.current.map((value) => value * state.dashboardFactor);
+    pendingCharts[0].valuesB = preset.previous;
+    pendingCharts[0].target = preset.target;
+  }
+}
+
 const renderers={dashboard:renderDashboard,scrap:renderScrap,alertas:renderAlerts,relatorios:renderReports,execucoes:renderExecutions,auditoria:renderAudit,configuracoes:renderSettings};
-function renderPage(){state.route=renderers[state.route]?state.route:'dashboard';pendingCharts=[];renderShell();$('#page-content').innerHTML=renderers[state.route]();hydrateReviewProductionContext();removeRedundantHelperCopy();$$('.automation-banner',$('#page-content')).forEach((card)=>card.remove());initCharts();$('#main-canvas').scrollTop=0;}
+function renderPage(){state.route=renderers[state.route]?state.route:'dashboard';pendingCharts=[];renderShell();$('#page-content').innerHTML=renderers[state.route]();hydrateReviewProductionContext();removeRedundantHelperCopy();hydrateDashboardView();$$('.automation-banner',$('#page-content')).forEach((card)=>card.remove());applyI18n(document);initCharts();$('#main-canvas').scrollTop=0;}
 function navigateTo(route){location.hash=route;if(location.hash===`#${route}`){state.route=route;renderPage();}closeOverlay();closeMobileSidebar();}
 
 function showToast(message,type='success'){
-  const el=document.createElement('div');el.className=`toast ${type}`;el.innerHTML=`${icon(type==='error'?'alert':'check')}<div><strong>${type==='error'?'Ação não concluída':'Tudo certo'}</strong><div>${message}</div></div>`;$('#toast-region').append(el);setTimeout(()=>el.remove(),3500);
+  const el=document.createElement('div');el.className=`toast ${type}`;el.innerHTML=`${icon(type==='error'?'alert':'check')}<div><strong>${type==='error'?'Ação não concluída':'Tudo certo'}</strong><div>${message}</div></div>`;$('#toast-region').append(el);applyI18n(el);setTimeout(()=>el.remove(),3500);
 }
-function openOverlay(html){const layer=$('#overlay-layer');layer.innerHTML=html;layer.style.display='flex';const focusable=$('button,input,select,textarea',layer);focusable?.focus();}
+function openOverlay(html){const layer=$('#overlay-layer');layer.innerHTML=html;layer.style.display='flex';applyI18n(layer);const focusable=$('button,input,select,textarea',layer);focusable?.focus();}
 function closeOverlay(){const layer=$('#overlay-layer');layer.innerHTML='';layer.style.display='';}
 function modal(title,body,footer=''){return `<section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><header class="modal-header"><h2>${title}</h2><button class="close-button" data-action="close-overlay" aria-label="Fechar">${icon('x')}</button></header><div class="modal-body">${body}</div>${footer?`<footer class="modal-footer">${footer}</footer>`:''}</section>`;}
 function drawer(title,body,footer=''){return `<aside class="drawer" role="dialog" aria-modal="true" aria-label="${title}"><header class="drawer-header"><h2>${title}</h2><button class="close-button" data-action="close-overlay" aria-label="Fechar">${icon('x')}</button></header><div class="drawer-body">${body}</div>${footer?`<footer class="drawer-footer">${footer}</footer>`:''}</aside>`;}
@@ -503,7 +938,10 @@ const tvPanels = [
   { title: 'Ocorrências prioritárias', eyebrow: 'Problemas que exigem ação' },
   { title: '2026 × 2025', eyebrow: 'Comparativo e tendência' },
 ];
-function tvKpi(label, value, detail = '', tone = '') { return `<article class="tv-kpi ${tone}"><span>${label}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`; }
+function tvKpi(label, value, detail = '', tone = '') {
+  const displayLabel = label === 'Redução vs 2025' ? 'Redução <span class="metric-tag" title="Previous Year">PY</span>' : label;
+  return `<article class="tv-kpi ${tone}"><span>${displayLabel}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`;
+}
 function tvHeader(panel) { return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>12 Ago 2026 · Atualizado às 14:32</strong><span>${icon('check')} Dados atualizados</span></div></header>`; }
 function tvPanelContent(index) {
   const panel = tvPanels[index];
@@ -515,6 +953,7 @@ function tvPanelContent(index) {
 function renderTvMode(resetProgress = true) {
   const root = $('#tv-mode'); pendingCharts = [];
   root.innerHTML = `<div class="tv-stage"><div class="tv-panel" data-panel="${state.tvPanel}">${tvPanelContent(state.tvPanel)}</div><footer class="tv-footer"><span>HANARO · Material Scrap / IF Cost</span><span>Atualizado 12/08/2026 14:32 · Próxima atualização 15:00</span></footer><div class="tv-controls visible" aria-label="Controles do Modo TV"><button data-action="tv-prev" aria-label="Painel anterior">${icon('chevronLeft')}</button><button data-action="tv-pause" aria-label="${state.tvPaused?'Continuar':'Pausar'} rotação">${icon(state.tvPaused?'play':'pause')}<span>${state.tvPaused?'Continuar':'Pausar'}</span></button><button data-action="tv-next" aria-label="Próximo painel">${icon('chevronRight')}</button><button data-action="tv-toggle-rotation" class="tv-text-control">${state.tvRotation?'Rotação automática':'Visão única'}</button><label class="tv-duration-control"><span>Intervalo</span><select id="tv-duration"><option value="10" ${state.tvDuration===10?'selected':''}>10s</option><option value="15" ${state.tvDuration===15?'selected':''}>15s</option><option value="30" ${state.tvDuration===30?'selected':''}>30s</option><option value="60" ${state.tvDuration===60?'selected':''}>60s</option></select></label><button data-action="tv-fullscreen" aria-label="Tela cheia">${icon('fullscreen')}<span>Tela cheia</span></button><button data-action="exit-tv" aria-label="Sair do Modo TV">${icon('x')}<span>Sair</span></button></div><div class="tv-position"><span>${state.tvPanel + 1} / ${tvPanels.length}</span><div class="tv-dots">${tvPanels.map((_,i)=>`<i class="${i===state.tvPanel?'active':''}"></i>`).join('')}</div></div><div class="tv-progress ${state.tvPaused || !state.tvRotation ? 'paused' : ''}" style="--tv-duration:${state.tvDuration}s"><i></i></div></div>`;
+  applyI18n(root);
   initCharts(); showTvControls();
   if (resetProgress) restartTvTimer();
 }
@@ -544,7 +983,7 @@ async function handleAction(action,el){
   if(action==='go-reports'||action==='new-report'){state.reportTab='gerar';return navigateTo('relatorios');}
   if(action.startsWith('export')||action==='generate-pdf'||action==='generate-excel'){el.classList.add('spinning');el.disabled=true;await delay(650);el.classList.remove('spinning');el.disabled=false;return showToast('Arquivo fictício preparado para demonstração.');}
   if(action==='refresh-dashboard'){el.classList.add('spinning');el.disabled=true;$('#sync-state').textContent='Atualizando...';await delay(600);state.dashboardFactor=1+.03*Math.random();el.disabled=false;el.classList.remove('spinning');$('#sync-state').textContent=`Atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;renderPage();return showToast('Dados atualizados.');}
-  if(action==='clear-dashboard'){state.dashboardFactor=1;renderPage();return showToast('Filtros limpos.');}
+  if(action==='clear-dashboard'){state.dashboardFactor=1;state.dashboardFilters={period:'01/08/2026 — 12/08/2026',view:'Acumulado',division:'Todas',department:'Todos',line:'Todas',family:'Todas',module:'Todos'};renderPage();return showToast('Filtros limpos.');}
   if(action==='dashboard-explore'){setExplorationContext({module:id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;setExplorationContext({module:row.module,partNumber:row.partNumber,line:row.line,transactionId:row.id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-review'){const row=model.transactions.find(t=>t.id===id);if(!row)return;state.selectedScrapIds=[row.id];state.activeReviewId=row.id;state.scrapView='review';setExplorationContext({module:row.module,partNumber:row.partNumber,line:row.line,transactionId:row.id},'Dashboard');navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(row.id)}`);return;}
@@ -597,7 +1036,36 @@ document.addEventListener('click',(event)=>{
   const row=event.target.closest('tr[data-row-id]');if(row){const {rowId,rowType}=row.dataset;if(rowType==='transaction')openTransaction(rowId);if(rowType==='alert')openAlert(rowId);if(rowType==='execution')openExecution(rowId);if(rowType==='audit')openAudit(rowId);if(rowType==='dashboard')openTransaction(rowId);if(rowType==='report')showToast(`Detalhes da versão ${rowId} carregados.`);}
 });
 document.addEventListener('input',(event)=>{if(event.target.id==='scrap-search'){state.scrapSearch=event.target.value;state.scrapPage=1;renderPage();setTimeout(()=>{const input=$('#scrap-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='audit-search'){state.auditSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#audit-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}});
-document.addEventListener('change',(event)=>{if(event.target.id==='page-size'){state.scrapPageSize=Number(event.target.value);state.scrapPage=1;renderPage()}if(event.target.matches('[data-filter^="dash-"]')){state.dashboardFactor=.91+Math.random()*.12;renderPage();showToast('Visão atualizada pelos filtros.')}if(event.target.id==='scrap-date'){state.scrapFilters.date=event.target.value;state.scrapPage=1;renderPage()}if(event.target.id==='scrap-division'){state.scrapFilters.division=event.target.value;state.scrapPage=1;renderPage()}if(event.target.id==='scrap-department'){state.scrapFilters.department=event.target.value;state.scrapPage=1;renderPage()}if(event.target.id==='scrap-line'){state.scrapFilters.line=event.target.value;state.scrapPage=1;renderPage()}if(event.target.id==='scrap-review-status'){state.scrapFilters.reviewStatus=event.target.value;state.scrapPage=1;renderPage()}if(event.target.id==='alert-severity'){state.alertSeverity=event.target.value;renderPage()}if(event.target.id==='exec-status'){state.executionStatus=event.target.value;renderPage()}if(event.target.id==='audit-entity'){state.auditEntity=event.target.value;renderPage()}if(event.target.id==='report-type'||event.target.id==='report-compare'){state.reportFactor=.9+Math.random()*.2;renderPage();showToast('Preview atualizado.')}if(event.target.id==='review-requires-cause'){syncScrapReview();renderPage()}if(event.target.id==='tv-duration'){state.tvDuration=Number(event.target.value);renderTvMode();}});
+document.addEventListener('change', (event) => {
+  const target = event.target;
+  if (target.id === 'global-language' || target.id === 'settings-language') {
+    state.locale = target.value;
+    localStorage.setItem('hanaro-locale', state.locale);
+    renderPage();
+    showToast(state.locale === 'pt-BR' ? 'Idioma alterado para Português.' : state.locale === 'en' ? 'Language changed to English.' : '언어가 한국어로 변경되었습니다.');
+    return;
+  }
+  if (target.id === 'page-size') { state.scrapPageSize = Number(target.value); state.scrapPage = 1; renderPage(); }
+  if (target.matches('[data-filter^="dash-"]')) {
+    const dashboardKeys = { 'dash-period': 'period', 'dash-view': 'view', 'dash-division': 'division', 'dash-department': 'department', 'dash-line': 'line', 'dash-family': 'family', 'dash-module': 'module' };
+    const key = dashboardKeys[target.id];
+    if (key) state.dashboardFilters[key] = target.value;
+    state.dashboardFactor = .91 + Math.random() * .12;
+    renderPage();
+    showToast(`${target.closest('.field')?.querySelector('label')?.textContent || 'Filtro'} atualizado para ${target.value}.`);
+  }
+  if (target.id === 'scrap-date') { state.scrapFilters.date = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-division') { state.scrapFilters.division = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-department') { state.scrapFilters.department = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-line') { state.scrapFilters.line = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-review-status') { state.scrapFilters.reviewStatus = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'alert-severity') { state.alertSeverity = target.value; renderPage(); }
+  if (target.id === 'exec-status') { state.executionStatus = target.value; renderPage(); }
+  if (target.id === 'audit-entity') { state.auditEntity = target.value; renderPage(); }
+  if (target.id === 'report-type' || target.id === 'report-compare') { state.reportFactor = .9 + Math.random() * .2; renderPage(); showToast('Preview atualizado.'); }
+  if (target.id === 'review-requires-cause') { syncScrapReview(); renderPage(); }
+  if (target.id === 'tv-duration') { state.tvDuration = Number(target.value); renderTvMode(); }
+});
 $('#overlay-layer').addEventListener('click',(event)=>{if(event.target.id==='overlay-layer')closeOverlay();});
 $('#sidebar-toggle').addEventListener('click',()=>{const shell=$('#app-shell'),collapsed=shell.classList.toggle('sidebar-collapsed');$('#sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('#sidebar-toggle').setAttribute('aria-label',collapsed?'Expandir menu':'Recolher menu');});
 $('#mobile-menu').addEventListener('click',()=>$('#app-shell').classList.add('sidebar-open'));
