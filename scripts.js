@@ -60,11 +60,18 @@ const navigation = [
   { route: 'configuracoes', label: 'Configurações', icon: 'settings' },
 ];
 
-const products = ['OLED65C4', 'OLED55C4', '32UN650', '27UP650', 'MyLink IVS', 'XBOOM RN9'];
 const partNumbers = ['EAJ65714501', 'EAY65769201', 'EAJ66284201', 'EBR85875402', 'EBR89032104', 'EAJ65987304', 'EAJ66124008', 'EAJ65871302', 'EBR88410211', 'EBR87941306', 'EAJ66310007', 'EBR90221003', 'EAJ66048109', 'EBR89273012', 'EAJ65600418', 'EBR87145021', 'EAJ66490005', 'EBR89916010'];
-const departments = ['Final Assembly A', 'Final Assembly B', 'SMT', 'IPI'];
-const lines = ['Line 02', 'Line 04', 'Line 05', 'Line 07'];
-const modules = ['Tela LCD', 'Moldura frontal', 'Placa principal PCB'];
+const components = ['Tela LCD', 'Placa principal PCB', 'Moldura frontal', 'Fonte de alimentação', 'Alto-falante'];
+const organizationCodes = ['ORG-01', 'ORG-02', 'ORG-03'];
+const accounts = ['541101', '541205', '541310', '541420', '541535', '541640'];
+const accountDescriptions = ['Consumo de material', 'Ajuste de inventário', 'Requisição de retrabalho', 'Perda de processo', 'Scrap de qualidade', 'Ajuste de devolução'];
+const subinventoryGroups = ['Produção', 'Qualidade', 'Retrabalho'];
+const subinventories = ['SUB-PRD-01', 'SUB-QLT-01', 'SUB-RWK-01', 'SUB-PRD-02'];
+const warehouseMarkets = ['Mercado A', 'Mercado B', 'Mercado C'];
+const receiptDepartments = ['Recebimento 01', 'Recebimento 02', 'Recebimento 03'];
+const scrapLines = ['Linha de Scrap 01', 'Linha de Scrap 02', 'Linha de Scrap 03', 'Linha de Scrap 04', 'Linha de Scrap 05'];
+const itemDescriptions = ['Painel OLED 65 polegadas', 'Moldura frontal OLED 55', 'Placa principal Monitor 32', 'Painel LCD 27 UHD', 'Moldura frontal IVS', 'Placa principal de áudio'];
+const itemSpecs = ['OLED UHD', 'Resina ABS preta', 'PCB multicamadas', 'LCD UHD', 'Resina ABS preta', 'PCB amplificador'];
 const productionScenarios = [
   {
     component: 'Tela LCD', defect: 'Risco profundo no painel', station: 'Esteira de montagem final',
@@ -101,10 +108,21 @@ const productionScenarios = [
     occurrence: 'O cabo flat foi inserido inclinado e danificou os contatos do conector da placa.',
     category: 'Processo', classification4m: ['Method', 'Man'], rootCause: 'Ausência de guia para garantir o ângulo correto de inserção.',
     corrective: 'Substituir a placa e inspecionar os conectores montados no turno.', preventive: 'Adicionar guia poka-yoke e reforçar o padrão visual do posto.'
+  },
+  {
+    component: 'Fonte de alimentação', defect: 'Saída de tensão fora da faixa', station: 'Teste elétrico',
+    occurrence: 'A fonte apresentou tensão instável durante a validação funcional do conjunto.',
+    category: 'Material', classification4m: ['Material', 'Machine'], rootCause: 'Componente eletrônico com variação acima do limite de especificação.',
+    corrective: 'Segregar as fontes do lote e repetir o teste elétrico.', preventive: 'Reforçar a inspeção de recebimento e o controle por lote do fornecedor.'
+  },
+  {
+    component: 'Alto-falante', defect: 'Distorção no teste de áudio', station: 'Teste acústico',
+    occurrence: 'O conjunto apresentou ruído e distorção acima do limite durante o teste final.',
+    category: 'Material', classification4m: ['Material'], rootCause: 'Variação na bobina do alto-falante comprometeu a resposta acústica.',
+    corrective: 'Substituir o componente e reinspecionar o aparelho.', preventive: 'Aplicar amostragem acústica reforçada no recebimento do componente.'
   }
 ];
 const aliases = ['D-COMMON', 'D-DIRECT', 'D-RW-REQ', 'P-REWORK', 'E-Q-SCRAP', 'Z-Q-RMA-ADJ'];
-const families = ['TV', 'Monitor', 'Áudio', 'IVS'];
 
 function generateTransactions() {
   const rows = Array.from({ length: 96 }, (_, i) => {
@@ -112,32 +130,36 @@ function generateTransactions() {
     const day = 12 - (i % 12);
     const qty = i === 0 ? 14 : 2 + ((i * 7) % 39);
     const exchange = i % 11 === 2 ? null : 5.05 + (i % 8) * .017;
-    const periodic = i === 0 ? 2845.7 : 390 + ((i * 347) % 2900);
-    const local = periodic * qty;
+    const issuePrice = i === 0 ? 2845.7 : 390 + ((i * 347) % 2900);
+    const issueAmount = issuePrice * qty;
     return {
       id: i === 0 ? 'TX-20260811-82194' : `TX-202608${String(day).padStart(2, '0')}-${82194 - i}`,
-      date: `${String(day).padStart(2, '0')}/08/2026`, division: i % 5 === 4 ? 'VS' : 'HE',
-      department: departments[i % departments.length], line: lines[(i + 1) % lines.length],
-      family: families[i % families.length], product: products[i % products.length],
-      partNumber: partNumbers[i % partNumbers.length], module: scenario.component, alias: aliases[i % aliases.length],
+      transactionDate: `${String(day).padStart(2, '0')}/08/2026`,
+      organizationCode: organizationCodes[i % organizationCodes.length],
+      account: accounts[i % accounts.length], accountDescription: accountDescriptions[i % accountDescriptions.length], accountAlias: aliases[i % aliases.length],
+      subinventoryGroup: subinventoryGroups[i % subinventoryGroups.length], subinventory: subinventories[i % subinventories.length],
+      warehouseMarket: warehouseMarkets[i % warehouseMarkets.length], receiptDepartment: receiptDepartments[i % receiptDepartments.length],
+      scrapLine: scrapLines[(i * 3 + 1) % scrapLines.length],
+      partNumber: partNumbers[i % partNumbers.length], itemDescription: itemDescriptions[i % itemDescriptions.length], itemSpec: itemSpecs[i % itemSpecs.length],
+      component: scenario.component,
       defect: scenario.defect, occurrence: scenario.occurrence, station: scenario.station,
-      qty, periodic, local, exchange, ifCost: exchange ? local / exchange : 0,
+      qty, issuePrice, issueAmount, exchangeRate: exchange, ifCost: exchange ? issueAmount / exchange : 0,
       source: 'GERP',
       executionId: i < 18 ? 'EXE-20260811-0042' : `EXE-202608${String(day).padStart(2, '0')}-${String(46 - (i % 15)).padStart(4, '0')}`,
-      status: !exchange ? 'Câmbio pendente' : i % 17 === 6 ? 'Rejeitado' : 'Validado',
+      processingStatus: !exchange ? 'Pendente' : i % 17 === 6 ? 'Rejeitado' : 'Validado',
       batch: `BAT-202608-${String(Math.floor(i / 12) + 1).padStart(3, '0')}`,
       processedAt: `${String(day).padStart(2, '0')}/08/2026 05:${String((i * 3) % 60).padStart(2, '0')}`,
       review: {
         status: i > 0 && i % 13 === 0 && exchange ? 'Justificado' : 'Pendente de revisão',
         category: i > 0 && i % 13 === 0 && exchange ? scenario.category : '', reason: i > 0 && i % 13 === 0 && exchange ? scenario.occurrence : '',
         requiresCause: i > 0 && i % 26 === 0 && exchange, classification4m: i > 0 && i % 26 === 0 && exchange ? scenario.classification4m : [], rootCause: i > 0 && i % 26 === 0 && exchange ? scenario.rootCause : '',
-        corrective: i > 0 && i % 13 === 0 && exchange ? scenario.corrective : '', preventive: i > 0 && i % 26 === 0 && exchange ? scenario.preventive : '', responsible: 'M. França', evidence: [], includeInReport: Boolean(i > 0 && i % 13 === 0 && exchange),
+        corrective: i > 0 && i % 13 === 0 && exchange ? scenario.corrective : '', preventive: i > 0 && i % 26 === 0 && exchange ? scenario.preventive : '', responsible: 'Analista de Qualidade', evidence: [], includeInReport: Boolean(i > 0 && i % 13 === 0 && exchange),
       },
     };
   });
-  Object.assign(rows[0], { date: '11/08/2026', exchange: 5.18, periodic: 2845.7, local: 39839.8, ifCost: 39839.8 / 5.18 });
-  const telaRows = rows.filter((row) => row.module === 'Tela LCD');
-  telaRows.forEach((row, index) => { row.partNumber = partNumbers[index % partNumbers.length]; if (!row.exchange) row.exchange = 5.12; });
+  Object.assign(rows[0], { transactionDate: '11/08/2026', processedAt: '11/08/2026 05:00', exchangeRate: 5.18, issuePrice: 2845.7, issueAmount: 39839.8, ifCost: 39839.8 / 5.18 });
+  const telaRows = rows.filter((row) => row.component === 'Tela LCD');
+  telaRows.forEach((row, index) => { row.partNumber = partNumbers[index % partNumbers.length]; if (!row.exchangeRate) { row.exchangeRate = 5.12; row.processingStatus = 'Validado'; } });
   const normalizeQuantity = (group, target) => {
     const original = group.reduce((sum, row) => sum + row.qty, 0);
     group.forEach((row) => { row.qty = Math.max(1, Math.floor(row.qty * target / original)); });
@@ -145,44 +167,53 @@ function generateTransactions() {
     while (difference > 0) { group[cursor % group.length].qty += 1; difference -= 1; cursor += 1; }
   };
   normalizeQuantity(telaRows, 287);
-  normalizeQuantity(rows.filter((row) => row.module === 'Moldura frontal'), 540);
-  normalizeQuantity(rows.filter((row) => row.module === 'Placa principal PCB'), 420);
+  normalizeQuantity(rows.filter((row) => row.component === 'Moldura frontal'), 360);
+  normalizeQuantity(rows.filter((row) => row.component === 'Placa principal PCB'), 330);
+  normalizeQuantity(rows.filter((row) => row.component === 'Fonte de alimentação'), 160);
+  normalizeQuantity(rows.filter((row) => row.component === 'Alto-falante'), 110);
   let mainQtyDifference = 14 - rows[0].qty, mainQtyCursor = 1;
   rows[0].qty = 14;
   while (mainQtyDifference > 0) { const candidate=telaRows[mainQtyCursor % telaRows.length]; if(candidate!==rows[0]&&candidate.qty>1){candidate.qty-=1;mainQtyDifference-=1;} mainQtyCursor+=1; }
   while (mainQtyDifference < 0) { const candidate=telaRows[mainQtyCursor % telaRows.length]; if(candidate!==rows[0]){candidate.qty+=1;mainQtyDifference+=1;} mainQtyCursor+=1; }
-  rows.forEach((row) => { row.local = row.periodic * row.qty; row.ifCost = row.exchange ? row.local / row.exchange : 0; });
+  rows.forEach((row) => { row.issueAmount = row.issuePrice * row.qty; row.ifCost = row.exchangeRate ? row.issueAmount / row.exchangeRate : 0; });
   const normalizeCost = (group, target) => {
     const current = group.reduce((sum, row) => sum + row.ifCost, 0);
     const factor = target / current;
-    group.forEach((row) => { if (row.exchange) row.periodic *= factor; row.local = row.periodic * row.qty; row.ifCost = row.exchange ? row.local / row.exchange : 0; });
+    group.forEach((row) => { if (row.exchangeRate) row.issuePrice *= factor; row.issueAmount = row.issuePrice * row.qty; row.ifCost = row.exchangeRate ? row.issueAmount / row.exchangeRate : 0; });
   };
   normalizeCost(telaRows, 72400);
-  normalizeCost(rows.filter((row) => row.module === 'Moldura frontal'), 41800);
-  normalizeCost(rows.filter((row) => row.module === 'Placa principal PCB'), 70060);
-  rows[0].periodic = 8420 * rows[0].exchange / rows[0].qty; rows[0].local = rows[0].periodic * rows[0].qty; rows[0].ifCost = 8420;
+  normalizeCost(rows.filter((row) => row.component === 'Placa principal PCB'), 46000);
+  normalizeCost(rows.filter((row) => row.component === 'Moldura frontal'), 38000);
+  normalizeCost(rows.filter((row) => row.component === 'Fonte de alimentação'), 17500);
+  normalizeCost(rows.filter((row) => row.component === 'Alto-falante'), 10360);
+  rows[0].issuePrice = 8420 * rows[0].exchangeRate / rows[0].qty; rows[0].issueAmount = rows[0].issuePrice * rows[0].qty; rows[0].ifCost = 8420;
   normalizeCost(telaRows.filter((row) => row.partNumber === 'EAJ65714501' && row !== rows[0]), 29980);
   normalizeCost(telaRows.filter((row) => row.partNumber === 'EAY65769201'), 19100);
   normalizeCost(telaRows.filter((row) => row.partNumber === 'EAJ66284201'), 7800);
   normalizeCost(telaRows.filter((row) => !['EAJ65714501','EAY65769201','EAJ66284201'].includes(row.partNumber)), 7100);
-  Object.assign(rows[54], { department: 'Final Assembly A', line: 'Line 04', family: 'TV', product: 'OLED65C4' });
+  Object.assign(rows[54], { organizationCode: 'ORG-01', accountAlias: 'E-Q-SCRAP', itemDescription: 'Painel OLED 65 polegadas' });
   return rows;
 }
 
 function generateAlerts() {
   const types = ['Aumento de telas riscadas', 'Reincidência de objeto estranho', 'Falhas no teste funcional', 'Desvio de torque', 'Painéis trincados', 'Alto volume de scrap'];
   return Array.from({ length: 20 }, (_, i) => {
+    const transaction = model?.transactions?.[i % model.transactions.length] || null;
     const scenario = productionScenarios[i % productionScenarios.length];
+    const component = transaction?.component || scenario.component;
+    const partNumber = transaction?.partNumber || partNumbers[i % partNumbers.length];
+    const alertDay = 12 - (i % 12);
+    const related = i === 0 ? ['TX-20260811-82194', 'TX-20260806-82140'] : [i, i + 6].map((index) => model?.transactions?.[index % model.transactions.length]?.id).filter(Boolean);
     return ({
-    id: i === 0 ? 'ALT-20260812-0021' : `ALT-202608${String(12 - (i % 5)).padStart(2, '0')}-${String(21 - i).padStart(4, '0')}`,
+    id: i === 0 ? 'ALT-20260812-0021' : `ALT-202608${String(alertDay).padStart(2, '0')}-${String(21 - i).padStart(4, '0')}`,
     severity: i < 6 ? 'Crítico' : i < 14 ? 'Alto' : 'Médio',
-    dateTime: i === 0 ? '12/08 08:42' : `${12 - (i % 5)}/08 ${String(7 + (i % 9)).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`,
-    type: types[i % types.length], department: departments[i % 4], line: lines[(i + 1) % 4], module: scenario.component,
+    dateTime: i === 0 ? '12/08 08:42' : `${String(alertDay).padStart(2, '0')}/08 ${String(7 + (i % 9)).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`,
+    type: types[i % types.length], component, partNumber,
     impact: i === 0 ? 8420 : 1300 + ((i * 793) % 6500),
     description: i === 0 ? 'Aumento de telas riscadas associado a objeto metálico encontrado na esteira' : `${scenario.defect}: ocorrência acima do limite configurado no posto ${scenario.station}`,
     status: i === 0 ? 'Novo' : i % 5 === 0 ? 'Arquivado' : i % 3 === 0 ? 'Lido' : 'Novo',
     channel: i % 2 === 0 ? 'E-mail e plataforma' : 'Plataforma',
-    transactionIds: i === 0 ? ['TX-20260811-82194', 'TX-20260806-82140'] : [],
+    transactionIds: related,
     });
   });
 }
@@ -201,26 +232,27 @@ function generateAudit() {
   const actions = ['Persistiu lote', 'Validou transação', 'Atualizou alerta', 'Consultou relatório', 'Aplicou taxa de câmbio'];
   const events = Array.from({ length: 50 }, (_, i) => ({
     id: `AUD-${92300 - i}`, timestamp: `12/08/2026 ${String(9 - Math.floor(i / 12)).padStart(2, '0')}:${String((51 - i * 3 + 60) % 60).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`,
-    actor: i % 4 === 0 ? 'm.franca' : 'hanaro-backend', origin: i % 4 === 0 ? 'Web' : 'API', action: actions[i % actions.length],
+    actor: i % 4 === 0 ? 'analista.qualidade' : 'hanaro-backend', origin: i % 4 === 0 ? 'Web' : 'API', action: actions[i % actions.length],
     entity: i % 2 ? 'Transaction' : 'Execution', identifier: i % 2 ? `TX-20260811-${82194 - i}` : `EXE-20260812-${String(46 - (i % 15)).padStart(4, '0')}`,
     before: i % 3 ? 'Recebido' : 'Validando', after: i % 3 ? 'Validado' : 'Concluído', correlation: `COR-${921842 - i}`, severity: i % 17 === 0 ? 'Crítico' : 'Informativo',
   }));
   return [
     { id:'AUD-92351',timestamp:'12/08/2026 09:51:02',actor:'hanaro-backend',origin:'API',action:'Processou dados recebidos do GERP',entity:'Execution',identifier:'EXE-20260811-0042',before:'Recebido',after:'Concluído',correlation:'COR-921842',severity:'Informativo' },
     { id:'AUD-92350',timestamp:'12/08/2026 09:50:11',actor:'hanaro-backend',origin:'API',action:'Gerou alerta por variação de IF Cost',entity:'Alert',identifier:'ALT-20260812-0021',before:'Inexistente',after:'Novo',correlation:'COR-921842',severity:'Crítico' },
-    { id:'AUD-92349',timestamp:'12/08/2026 09:48:22',actor:'m.franca',origin:'Web',action:'Abriu registros relacionados pelo alerta',entity:'Alert',identifier:'ALT-20260812-0021',before:'Novo',after:'Lido',correlation:'COR-921842',severity:'Informativo' },
-    { id:'AUD-92348',timestamp:'12/08/2026 09:45:09',actor:'m.franca',origin:'Web',action:'Justificou registro de scrap',entity:'Transaction',identifier:'TX-20260810-82168',before:'Pendente de revisão',after:'Justificado',correlation:'COR-921842',severity:'Informativo' },
-    { id:'AUD-92347',timestamp:'12/08/2026 09:42:41',actor:'m.franca',origin:'Web',action:'Registrou relatório com scraps revisados',entity:'Report',identifier:'REP-2026-W33-v8',before:'Rascunho',after:'Publicado',correlation:'COR-921842',severity:'Informativo' },
+    { id:'AUD-92349',timestamp:'12/08/2026 09:48:22',actor:'analista.qualidade',origin:'Web',action:'Abriu registros relacionados pelo alerta',entity:'Alert',identifier:'ALT-20260812-0021',before:'Novo',after:'Lido',correlation:'COR-921842',severity:'Informativo' },
+    { id:'AUD-92348',timestamp:'12/08/2026 09:45:09',actor:'analista.qualidade',origin:'Web',action:'Justificou registro de scrap',entity:'Transaction',identifier:'TX-20260810-82168',before:'Pendente de revisão',after:'Justificado',correlation:'COR-921842',severity:'Informativo' },
+    { id:'AUD-92347',timestamp:'12/08/2026 09:42:41',actor:'analista.qualidade',origin:'Web',action:'Registrou relatório com scraps revisados',entity:'Report',identifier:'REP-2026-W33-v8',before:'Rascunho',after:'Publicado',correlation:'COR-921842',severity:'Informativo' },
     ...events,
   ];
 }
 
 const model = {
-  transactions: generateTransactions(), alerts: generateAlerts(), executions: generateExecutions(), audit: generateAudit(),
-  reports: Array.from({ length: 8 }, (_, i) => ({ id: `REP-2026-W${String(33 - Math.floor(i / 2)).padStart(2, '0')}-v${8 - i}`, version: `v1.${8 - i}`, type: i % 3 === 0 ? 'Mensal' : 'Semanal', period: i % 3 === 0 ? 'Ago/2026' : '03–09 Ago', generatedAt: `${10 - (i % 4)}/08 08:${54 - i}`, author: 'M. França', ifCost: 47820 + i * 870, format: i % 2 ? 'XLSX' : 'PDF', status: i === 7 ? 'Rascunho' : 'Publicado', reviewIds: i < 3 ? ['TX-20260810-82168','TX-20260809-82155'] : [] })),
+  transactions: generateTransactions(), alerts: [], executions: generateExecutions(), audit: generateAudit(),
+  reports: Array.from({ length: 8 }, (_, i) => ({ id: `REP-2026-W${String(33 - Math.floor(i / 2)).padStart(2, '0')}-v${8 - i}`, version: `v1.${8 - i}`, type: i % 3 === 0 ? 'Mensal' : 'Semanal', period: i % 3 === 0 ? 'Ago/2026' : '03–09 Ago', generatedAt: `${10 - (i % 4)}/08 08:${54 - i}`, author: 'Analista de Qualidade', ifCost: 47820 + i * 870, format: i % 2 ? 'XLSX' : 'PDF', status: i === 7 ? 'Rascunho' : 'Publicado', reviewIds: i < 3 ? ['TX-20260810-82168','TX-20260809-82155'] : [] })),
   sends: Array.from({ length: 6 }, (_, i) => ({ report: `v1.${8 - i}`, recipient: i % 2 ? 'qualidade@exemplo.local' : 'gestores@exemplo.local', channel: 'E-mail', requestedAt: `${10 - i}/08 09:10`, status: i === 2 ? 'Falha' : i === 4 ? 'Pendente' : 'Enviado', attempts: i === 2 ? 2 : 1 })),
   settings: { target: -15, baseline: 2025, year: 2026, upload: true, validation: true, reportFrequency: 'Semanal', notifyCritical: true },
 };
+model.alerts = generateAlerts();
 
 const initialRouteParts = (location.hash.slice(1) || 'dashboard').split('?')[0].split('/');
 const initialReviewId = initialRouteParts[0] === 'scrap' && initialRouteParts[1] === 'revisar' ? decodeURIComponent(initialRouteParts[2] || '') : null;
@@ -230,13 +262,15 @@ const queryLocale = new URLSearchParams(location.search).get('lang');
 const state = {
   route: initialRouteParts[0] || 'dashboard', reportTab: 'gerar', settingsTab: 'negocio',
   locale: supportedLocales.includes(queryLocale) ? queryLocale : supportedLocales.includes(storedLocale) ? storedLocale : 'pt-BR',
-  scrapPage: 1, scrapPageSize: 10, scrapSearch: '', scrapSort: { key: 'date', direction: 'desc' }, auditSearch: '', dashboardFactor: 1,
-  dashboardFilters: { period: '01/08/2026 — 12/08/2026', view: 'Acumulado', division: 'Todas', department: 'Todos', line: 'Todas', family: 'Todas', module: 'Todos' },
-  scrapFilters: { date: 'Todas as datas', division: 'Todas', department: 'Todos', line: 'Todas', reviewStatus: 'Todos' },
-  alertSeverity: 'Todas', executionStatus: 'Todos', auditEntity: 'Todas', reportFactor: 1,
+  scrapPage: 1, scrapPageSize: 10, scrapSearch: '', scrapSort: { key: 'transactionDate', direction: 'desc' }, auditSearch: '', dashboardFactor: 1,
+  dashboardFilters: { period: '01/08/2026 — 12/08/2026', view: 'Acumulado', item: 'Todos', partNumber: 'Todos', scrapLine: 'Todas' },
+  scrapFilters: { date: 'Todas as datas', accountAlias: 'Todos', processingStatus: 'Todos', reviewStatus: 'Todos' },
+  scrapAdvancedFilters: { organizationCode: 'Todas', subinventoryGroup: 'Todos', subinventory: 'Todos', warehouseMarket: 'Todos', receiptDepartment: 'Todos', partNumber: 'Todos' },
+  alertFilters: { period: 'Últimos 7 dias', severity: 'Todas', type: 'Todos', item: 'Todos', status: 'Todos' },
+  executionStatus: 'Todos', auditEntity: 'Todas', reportFactor: 1,
   scrapView: initialRouteParts[1] === 'revisar' ? 'review' : 'list', selectedScrapIds: initialReviewId ? [initialReviewId] : [], activeReviewId: initialReviewId,
   tvActive: false, tvPanel: 0, tvPaused: false, tvRotation: true, tvDuration: 15,
-  context: { source: null, module: null, partNumber: null, line: null, transactionId: null, alertId: null, executionId: null },
+  context: { source: null, component: null, partNumber: null, scrapLine: null, transactionId: null, alertId: null, executionId: null },
 };
 let tvTimer = null;
 let tvControlsTimer = null;
@@ -246,14 +280,14 @@ const i18nMessages = {
     'Base de Scrap': 'Scrap Database', 'Alertas': 'Alerts', 'Relatórios': 'Reports', 'Execuções': 'Runs', 'Auditoria': 'Audit', 'Configurações': 'Settings',
     'Ajuda e suporte': 'Help and support', 'Analista de Qualidade': 'Quality Analyst', 'Atualizado às 09:42': 'Updated at 09:42',
     'Dashboard de Scrap': 'Scrap Dashboard', 'Atualizar': 'Refresh', 'Exportar dados': 'Export data', 'Gerar relatório': 'Generate report', 'Limpar filtros': 'Clear filters',
-    'Período': 'Period', 'Visão': 'View', 'Departamento': 'Department', 'Linha': 'Line', 'Família': 'Family', 'Material': 'Material',
+    'Período': 'Period', 'Visão': 'View', 'Material': 'Material',
     'Acumulado': 'Cumulative', 'Diário': 'Daily', 'Semanal': 'Weekly', 'Mensal': 'Monthly', 'Todas': 'All', 'Todos': 'All', 'Últimos 7 dias': 'Last 7 days',
     'IF Cost acumulado': 'Cumulative IF Cost', 'Mesmo período': 'Same period', 'Redução': 'Reduction', 'Gap para meta': 'Gap to target', 'Scrap registrado': 'Recorded scrap',
     'Evolução acumulada do IF Cost': 'Cumulative IF Cost trend', 'Evolução diária do IF Cost': 'Daily IF Cost trend', 'Evolução semanal do IF Cost': 'Weekly IF Cost trend', 'Evolução mensal do IF Cost': 'Monthly IF Cost trend',
     'Comparativo automático 2026, 2025 e meta': 'Automatic comparison: 2026, 2025 and target', 'Top ofensores': 'Top offenders', 'Explorar na Base': 'Explore database',
-    'Pareto de componentes': 'Component Pareto', 'IF Cost por departamento': 'IF Cost by department', 'Ocorrências que exigem atenção': 'Occurrences requiring attention',
-    'Data': 'Date', 'Produto': 'Product', 'Componente': 'Component', 'Status': 'Status', 'Ações': 'Actions', 'Ver na Base': 'View in database', 'Revisar': 'Review', 'Ver revisão': 'View review',
-    'Buscar Part Number, produto ou ID...': 'Search Part Number, product or ID...', 'Mais filtros': 'More filters', 'Data da transação': 'Transaction date', 'Status da revisão': 'Review status',
+    'Pareto de componentes': 'Component Pareto', 'Ocorrências que exigem atenção': 'Occurrences requiring attention',
+    'Data': 'Date', 'Componente': 'Component', 'Status': 'Status', 'Ações': 'Actions', 'Ver na Base': 'View in database', 'Revisar': 'Review', 'Ver revisão': 'View review',
+    'Mais filtros': 'More filters', 'Data da transação': 'Transaction date', 'Status da revisão': 'Review status',
     'Todas as datas': 'All dates', 'Hoje': 'Today', 'Pendente de revisão': 'Pending review', 'Em revisão': 'Under review', 'Justificado': 'Justified',
     'IF Cost filtrado': 'Filtered IF Cost', 'QTY filtrada': 'Filtered QTY', 'Participação no total': 'Share of total', 'Pendentes de revisão': 'Pending review', 'Justificados': 'Justified',
     'Ranking de Part Numbers': 'Part Number ranking', 'Registros de scrap': 'Scrap records', 'Revisão': 'Review', 'Ação': 'Action', 'Justificar selecionados': 'Justify selected', 'Limpar seleção': 'Clear selection',
@@ -265,7 +299,7 @@ const i18nMessages = {
     'Incluir no próximo relatório': 'Include in next report', 'Origem': 'Source', 'Execução': 'Run', 'Defeito de produção': 'Production defect', 'Defeito observado': 'Observed defect',
     'Ocorrência registrada': 'Recorded occurrence', 'Dados do scrap': 'Scrap data', 'Rastreabilidade automática': 'Automatic traceability', 'Processado em': 'Processed at',
     'Severidade': 'Severity', 'Tipo': 'Type', 'Componente afetado': 'Affected component', 'Novos': 'New', 'Críticos': 'Critical', 'Lidos': 'Read', 'Enviados por e-mail': 'Sent by email',
-    'Alertas por dia': 'Alerts per day', 'Origem das notificações': 'Notification source', 'Evento': 'Event', 'Descrição': 'Description', 'Leitura': 'Read status', 'Canal': 'Channel', 'Ver registros': 'View records',
+    'Alertas por dia': 'Alerts per day', 'Evento': 'Event', 'Descrição': 'Description', 'Leitura': 'Read status', 'Canal': 'Channel', 'Ver registros': 'View records',
     'Marcar novos como lidos': 'Mark new as read', 'Exportar': 'Export', 'Gerar relatório': 'Generate report', 'Versões': 'Versions', 'Envios': 'Deliveries', 'Novo relatório': 'New report',
     'Exportar histórico': 'Export history', 'Configuração': 'Configuration', 'Comparação': 'Comparison', 'Formato': 'Format', 'Gerar PDF': 'Generate PDF', 'Gerar Excel': 'Generate Excel',
     'Gerar e registrar versão': 'Generate and register version', 'Registros justificados do período': 'Justified records for the period', 'Preview': 'Preview',
@@ -283,14 +317,14 @@ const i18nMessages = {
     'Dashboard': '대시보드', 'Base de Scrap': '스크랩 데이터', 'Alertas': '알림', 'Relatórios': '보고서', 'Execuções': '실행', 'Auditoria': '감사', 'Configurações': '설정',
     'Ajuda e suporte': '도움말 및 지원', 'Analista de Qualidade': '품질 분석가', 'Atualizado às 09:42': '09:42 업데이트',
     'Dashboard de Scrap': '스크랩 대시보드', 'Atualizar': '새로고침', 'Exportar dados': '데이터 내보내기', 'Gerar relatório': '보고서 생성', 'Limpar filtros': '필터 초기화',
-    'Período': '기간', 'Visão': '보기', 'Division': '사업부', 'Departamento': '부서', 'Linha': '라인', 'Família': '제품군', 'Material': '자재',
+    'Período': '기간', 'Visão': '보기', 'Material': '자재',
     'Acumulado': '누적', 'Diário': '일간', 'Semanal': '주간', 'Mensal': '월간', 'Todas': '전체', 'Todos': '전체', 'Últimos 7 dias': '최근 7일',
     'IF Cost acumulado': '누적 IF Cost', 'Mesmo período': '동일 기간', 'Redução': '감소율', 'Gap para meta': '목표 차이', 'Scrap registrado': '등록 스크랩',
     'Evolução acumulada do IF Cost': '누적 IF Cost 추이', 'Evolução diária do IF Cost': '일간 IF Cost 추이', 'Evolução semanal do IF Cost': '주간 IF Cost 추이', 'Evolução mensal do IF Cost': '월간 IF Cost 추이',
     'Comparativo automático 2026, 2025 e meta': '2026년, 2025년 및 목표 자동 비교', 'Top ofensores': '주요 손실 항목', 'Explorar na Base': '데이터에서 보기',
-    'Pareto de componentes': '부품 파레토', 'IF Cost por departamento': '부서별 IF Cost', 'Ocorrências que exigem atenção': '주의가 필요한 발생 건',
-    'Data': '날짜', 'Produto': '제품', 'Componente': '부품', 'Status': '상태', 'Ações': '작업', 'Ver na Base': '데이터 보기', 'Revisar': '검토', 'Ver revisão': '검토 보기',
-    'Buscar Part Number, produto ou ID...': '부품 번호, 제품 또는 ID 검색...', 'Mais filtros': '추가 필터', 'Data da transação': '거래 날짜', 'Status da revisão': '검토 상태',
+    'Pareto de componentes': '부품 파레토', 'Ocorrências que exigem atenção': '주의가 필요한 발생 건',
+    'Data': '날짜', 'Componente': '부품', 'Status': '상태', 'Ações': '작업', 'Ver na Base': '데이터 보기', 'Revisar': '검토', 'Ver revisão': '검토 보기',
+    'Mais filtros': '추가 필터', 'Data da transação': '거래 날짜', 'Status da revisão': '검토 상태',
     'Todas as datas': '전체 날짜', 'Hoje': '오늘', 'Pendente de revisão': '검토 대기', 'Em revisão': '검토 중', 'Justificado': '사유 등록 완료',
     'IF Cost filtrado': '필터된 IF Cost', 'QTY filtrada': '필터된 수량', 'Participação no total': '전체 비중', 'Pendentes de revisão': '검토 대기', 'Justificados': '사유 등록 완료',
     'Ranking de Part Numbers': '부품 번호 순위', 'Registros de scrap': '스크랩 기록', 'Revisão': '검토', 'Ação': '작업', 'Justificar selecionados': '선택 항목 사유 등록', 'Limpar seleção': '선택 해제',
@@ -302,7 +336,7 @@ const i18nMessages = {
     'Incluir no próximo relatório': '다음 보고서에 포함', 'Origem': '출처', 'Execução': '실행', 'Defeito de produção': '생산 결함', 'Defeito observado': '관찰된 결함',
     'Ocorrência registrada': '등록된 발생 내용', 'Dados do scrap': '스크랩 데이터', 'Rastreabilidade automática': '자동 추적', 'Processado em': '처리 시간',
     'Severidade': '심각도', 'Tipo': '유형', 'Novos': '신규', 'Críticos': '긴급', 'Lidos': '읽음', 'Enviados por e-mail': '이메일 발송',
-    'Alertas por dia': '일별 알림', 'Origem das notificações': '알림 출처', 'Evento': '이벤트', 'Descrição': '설명', 'Leitura': '열람 상태', 'Canal': '채널', 'Ver registros': '기록 보기',
+    'Alertas por dia': '일별 알림', 'Evento': '이벤트', 'Descrição': '설명', 'Leitura': '열람 상태', 'Canal': '채널', 'Ver registros': '기록 보기',
     'Marcar novos como lidos': '신규 알림 읽음 처리', 'Exportar': '내보내기', 'Versões': '버전', 'Envios': '발송', 'Novo relatório': '새 보고서', 'Exportar histórico': '이력 내보내기',
     'Configuração': '구성', 'Comparação': '비교', 'Formato': '형식', 'Gerar PDF': 'PDF 생성', 'Gerar Excel': 'Excel 생성', 'Gerar e registrar versão': '버전 생성 및 등록',
     'Registros justificados do período': '기간 내 사유 등록 기록', 'Preview': '미리보기', 'Início': '시작', 'Fim': '종료', 'Duração': '소요 시간', 'Recebidos': '수신', 'Válidos': '유효', 'Rejeitados': '거부',
@@ -323,7 +357,7 @@ Object.assign(i18nMessages.en, {
   'Áudio': 'Audio', 'Acumulado 2026 × PY': 'Cumulative 2026 × PY', 'Mesmo período PY': 'Same period PY',
   'Agosto/2026': 'August/2026', 'Ago/2026': 'Aug/2026', '03–09 Ago': 'Aug 03–09',
   '1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal': '1. LCD panel · 2. Main PCB · 3. Front frame',
-  'Data/Hora': 'Date/Time', 'Departamento / Linha': 'Department / Line', 'Produto / Família': 'Product / Family', 'Módulo': 'Component', 'Impacto': 'Impact',
+  'Data/Hora': 'Date/Time', 'Impacto': 'Impact',
   'Risco profundo no painel': 'Deep scratch on panel', 'Trinca no ponto de fixação': 'Crack at mounting point', 'Falha no teste funcional': 'Functional test failure',
   'Painel trincado por impacto': 'Impact-cracked panel', 'Deformação e desalinhamento': 'Deformation and misalignment', 'Conector danificado': 'Damaged connector',
   'Esteira de montagem final': 'Final assembly conveyor', 'Posto de parafusamento': 'Screwdriving station', 'Montagem eletrônica': 'Electronics assembly',
@@ -370,7 +404,7 @@ Object.assign(i18nMessages.en, {
   'Pausar': 'Pause', 'Continuar': 'Resume', 'Rotação automática': 'Automatic rotation', 'Visão única': 'Single view', 'Intervalo': 'Interval', 'Tela cheia': 'Full screen', 'Sair': 'Exit',
   'ONDE ESTAMOS PERDENDO DINHEIRO': 'WHERE WE ARE LOSING MONEY', 'Principais ofensores do período': 'Top offenders for the period',
   'Onde estamos perdendo dinheiro': 'Where we are losing money',
-  'Pareto de defeitos por IF Cost': 'Defect Pareto by IF Cost', 'Linha mais crítica': 'Most critical line', '+22% vs média recente': '+22% vs recent average',
+  'Pareto de defeitos por IF Cost': 'Defect Pareto by IF Cost',
   'Defeito mais crítico': 'Most critical defect', 'Risco no painel': 'Panel scratch', 'do IF Cost acumulado': 'of cumulative IF Cost',
   'PROBLEMAS QUE EXIGEM AÇÃO': 'ISSUES REQUIRING ACTION', 'Ocorrências prioritárias': 'Priority occurrences', 'Situação das revisões': 'Review status',
   'Problemas que exigem ação': 'Issues requiring action',
@@ -408,9 +442,7 @@ Object.assign(i18nMessages.en, {
   'Registrou relatório com scraps revisados': 'Registered report with reviewed scraps', 'Persistiu lote': 'Persisted batch',
   'Validou transação': 'Validated transaction', 'Atualizou alerta': 'Updated alert', 'Consultou relatório': 'Viewed report',
   'Aplicou taxa de câmbio': 'Applied exchange rate', 'Recebido': 'Received', 'Validando': 'Validating', 'Inexistente': 'Nonexistent', 'Rascunho': 'Draft',
-  'Analista': 'Analyst', 'Qualidade': 'Quality', 'Gestor': 'Manager', 'Todas as divisões': 'All divisions',
-  'Operação SMT': 'SMT Operations', 'Operação': 'Operations', 'Consulta TV': 'TV Viewer', 'Consulta': 'Viewer',
-  'HE / Qualidade': 'HE / Quality',
+  'Analista': 'Analyst', 'Qualidade': 'Quality', 'Gestor': 'Manager', 'Consulta': 'Viewer',
   'Sujeito à homologação': 'Subject to validation', 'Contingência pós-falha': 'Post-failure contingency',
   'Liberada apenas por uma execução cujo reprocessamento também falhou.': 'Released only for a run whose reprocessing also failed.',
   'Validação obrigatória': 'Required validation', 'Valida o arquivo antes da recuperação.': 'Validates the file before recovery.',
@@ -444,7 +476,7 @@ Object.assign(i18nMessages.ko, {
   'Áudio': '오디오', 'Acumulado 2026 × PY': '2026년 누적 × PY', 'Mesmo período PY': 'PY 동일 기간',
   'Agosto/2026': '2026년 8월', 'Ago/2026': '2026년 8월', '03–09 Ago': '8월 3–9일',
   '1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal': '1. LCD 패널 · 2. 메인 PCB · 3. 전면 프레임',
-  'Data/Hora': '날짜/시간', 'Departamento / Linha': '부서 / 라인', 'Produto / Família': '제품 / 제품군', 'Módulo': '부품', 'Impacto': '영향',
+  'Data/Hora': '날짜/시간', 'Impacto': '영향',
   'Risco profundo no painel': '패널 깊은 긁힘', 'Trinca no ponto de fixação': '체결부 균열', 'Falha no teste funcional': '기능 검사 실패',
   'Painel trincado por impacto': '충격으로 인한 패널 균열', 'Deformação e desalinhamento': '변형 및 정렬 불량', 'Conector danificado': '커넥터 손상',
   'Esteira de montagem final': '최종 조립 컨베이어', 'Posto de parafusamento': '나사 체결 공정', 'Montagem eletrônica': '전자 조립',
@@ -489,7 +521,7 @@ Object.assign(i18nMessages.ko, {
   'Pausar': '일시 정지', 'Continuar': '계속', 'Rotação automática': '자동 전환', 'Visão única': '단일 보기', 'Intervalo': '전환 간격', 'Tela cheia': '전체 화면', 'Sair': '나가기',
   'ONDE ESTAMOS PERDENDO DINHEIRO': '비용 손실이 발생하는 영역', 'Principais ofensores do período': '기간별 주요 손실 요인',
   'Onde estamos perdendo dinheiro': '비용 손실이 발생하는 영역',
-  'Pareto de defeitos por IF Cost': 'IF Cost 기준 불량 파레토', 'Linha mais crítica': '가장 심각한 라인', '+22% vs média recente': '최근 평균 대비 +22%',
+  'Pareto de defeitos por IF Cost': 'IF Cost 기준 불량 파레토',
   'Defeito mais crítico': '가장 심각한 불량', 'Risco no painel': '패널 긁힘', 'do IF Cost acumulado': '누적 IF Cost 중',
   'PROBLEMAS QUE EXIGEM AÇÃO': '조치가 필요한 문제', 'Ocorrências prioritárias': '우선 처리 발생 건', 'Situação das revisões': '검토 현황',
   'Problemas que exigem ação': '조치가 필요한 문제',
@@ -527,9 +559,7 @@ Object.assign(i18nMessages.ko, {
   'Registrou relatório com scraps revisados': '검토된 스크랩 보고서를 등록함', 'Persistiu lote': '배치를 저장함',
   'Validou transação': '거래를 검증함', 'Atualizou alerta': '알림을 업데이트함', 'Consultou relatório': '보고서를 조회함',
   'Aplicou taxa de câmbio': '환율을 적용함', 'Recebido': '수신됨', 'Validando': '검증 중', 'Inexistente': '없음', 'Rascunho': '초안',
-  'Analista': '분석가', 'Qualidade': '품질', 'Gestor': '관리자', 'Todas as divisões': '모든 사업부',
-  'Operação SMT': 'SMT 운영', 'Operação': '운영', 'Consulta TV': 'TV 조회 사용자', 'Consulta': '조회 사용자',
-  'HE / Qualidade': 'HE / 품질',
+  'Analista': '분석가', 'Qualidade': '품질', 'Gestor': '관리자', 'Consulta': '조회 사용자',
   'Sujeito à homologação': '검증 필요', 'Contingência pós-falha': '실패 후 비상 처리',
   'Liberada apenas por uma execução cujo reprocessamento também falhou.': '재처리도 실패한 실행에만 허용됩니다.',
   'Validação obrigatória': '필수 검증', 'Valida o arquivo antes da recuperação.': '복구 전에 파일을 검증합니다.',
@@ -555,12 +585,52 @@ Object.assign(i18nMessages.ko, {
   'Como o IF Cost é calculado': 'IF Cost 계산 방식'
 });
 
+Object.assign(i18nMessages.en, {
+  'Item / Componente': 'Item / Component', 'Tipo de movimentação': 'Movement type', 'Pareto de Part Numbers': 'Part Number Pareto',
+  'Linha do scrap': 'Scrap line', 'IF Cost por linha de scrap': 'IF Cost by scrap line', 'Part Number / Descrição': 'Part Number / Description', 'Meta fixa': 'Fixed target', 'Meta do período': 'Period target',
+  'Mesmo período 2025': 'Same period in 2025', 'Redução vs 2025': 'Reduction vs 2025', 'Entenda esta métrica': 'Understand this metric', 'Como avaliar esta métrica?': 'How to read this metric?',
+  'Impacto no período': 'Period impact',
+  'Compara o IF Cost atual com o mesmo período de 2025. Quanto maior a redução do custo, melhor. A meta é reduzir 15%; o gap mostra quanto ainda falta em pontos percentuais.': 'Compares the current IF Cost with the same period in 2025. A larger cost reduction is better. The target is a 15% reduction; the gap shows the remaining percentage points.',
+  'Comparação com o ano anterior': 'Previous-year comparison',
+  'PY significa Previous Year (ano anterior). Este valor representa o IF Cost do mesmo intervalo de datas de 2025 e serve como referência para calcular a redução de 2026.': 'PY means Previous Year. This value is the IF Cost for the same date range in 2025 and is the reference used to calculate the 2026 reduction.',
+  '2025 — Mesmo período': '2025 — Same period',
+  'Buscar Part Number, descrição ou ID...': 'Search Part Number, description or ID...', 'Status do registro': 'Record status',
+  'Organização': 'Organization', 'Grupo de subinventário': 'Subinventory group', 'Subinventário': 'Subinventory',
+  'Mercado do armazém': 'Warehouse market', 'Departamento de recebimento': 'Receipt department', 'Descrição do item': 'Item description',
+  'Alertas por tipo': 'Alerts by type', 'Registros relacionados': 'Related records', 'Part Number mais crítico': 'Top-impact Part Number',
+  'Maior impacto acumulado': 'Highest cumulative impact', 'Revisão de scrap': 'Scrap review', 'Indicadores e relatórios': 'Indicators and reports',
+  'Consulta / Kiosk': 'Viewer / Kiosk', 'Visualização': 'View only', 'Administrador': 'Administrator',
+  'Configuração do protótipo': 'Prototype settings', 'Usuário de demonstração': 'Demo user', 'Analista de Qualidade': 'Quality Analyst',
+  'Participação equivalente ao filtro atual': 'Equivalent share for the current filter'
+});
+
+Object.assign(i18nMessages.ko, {
+  'Item / Componente': '품목 / 부품', 'Tipo de movimentação': '이동 유형', 'Pareto de Part Numbers': 'Part Number 파레토',
+  'Linha do scrap': '스크랩 라인', 'IF Cost por linha de scrap': '스크랩 라인별 IF Cost', 'Part Number / Descrição': 'Part Number / 설명', 'Meta fixa': '고정 목표', 'Meta do período': '기간 목표',
+  'Mesmo período 2025': '2025년 동일 기간', 'Redução vs 2025': '2025년 대비 감소율', 'Entenda esta métrica': '이 지표 이해하기', 'Como avaliar esta métrica?': '이 지표를 해석하는 방법',
+  'Impacto no período': '기간 영향',
+  'Compara o IF Cost atual com o mesmo período de 2025. Quanto maior a redução do custo, melhor. A meta é reduzir 15%; o gap mostra quanto ainda falta em pontos percentuais.': '현재 IF Cost를 2025년 같은 기간과 비교합니다. 비용 감소 폭이 클수록 좋습니다. 목표는 15% 감소이며, 갭은 아직 필요한 퍼센트포인트를 나타냅니다.',
+  'Comparação com o ano anterior': '전년 비교',
+  'PY significa Previous Year (ano anterior). Este valor representa o IF Cost do mesmo intervalo de datas de 2025 e serve como referência para calcular a redução de 2026.': 'PY는 Previous Year(전년)를 의미합니다. 이 값은 2025년 동일 기간의 IF Cost이며 2026년 감소율 계산 기준으로 사용됩니다.',
+  '2025 — Mesmo período': '2025년 — 동일 기간',
+  'Buscar Part Number, descrição ou ID...': 'Part Number, 설명 또는 ID 검색...', 'Status do registro': '레코드 상태',
+  'Organização': '조직', 'Grupo de subinventário': '하위 재고 그룹', 'Subinventário': '하위 재고',
+  'Mercado do armazém': '창고 시장', 'Departamento de recebimento': '입고 부서', 'Descrição do item': '품목 설명',
+  'Alertas por tipo': '유형별 알림', 'Registros relacionados': '관련 레코드', 'Part Number mais crítico': '최대 영향 Part Number',
+  'Maior impacto acumulado': '최대 누적 영향', 'Revisão de scrap': '스크랩 검토', 'Indicadores e relatórios': '지표 및 보고서',
+  'Consulta / Kiosk': '조회 / 키오스크', 'Visualização': '조회 전용', 'Administrador': '관리자',
+  'Configuração do protótipo': '프로토타입 설정', 'Usuário de demonstração': '데모 사용자', 'Analista de Qualidade': '품질 분석가',
+  'Participação equivalente ao filtro atual': '현재 필터와 동일한 비중'
+});
+
 const i18nTextSources = new WeakMap();
 const i18nAttributeSources = new WeakMap();
 
 function translateDynamicText(text, locale) {
   if (locale === 'pt-BR') return text;
   const rules = locale === 'en' ? [
+    [/^([\d.,]+)% do IF Cost$/, '$1% of IF Cost'],
+    [/^Meta do período: (.+)$/, 'Period target: $1'], [/^US\$\s*([\d.,]+) (acima|abaixo) da meta do período$/, (_, amount, position) => `US$ ${amount} ${position === 'acima' ? 'above' : 'below'} the period target`],
     [/^(\d+) transações$/, '$1 transactions'], [/^(\d+) registros$/, '$1 records'], [/^(\d+) alertas$/, '$1 alerts'], [/^(\d+) unidades$/, '$1 units'], [/^(\d+) ocorrências$/, '$1 occurrences'],
     [/^(\d+) un\.$/, '$1 units'], [/^(\d+) un\. · (\d+) registros$/, '$1 units · $2 records'], [/^(\d+) registros · (\d+) un\.$/, '$1 records · $2 units'],
     [/^(\d+) registros · página (\d+) de (\d+)$/, '$1 records · page $2 of $3'], [/^(\d+) incluídos$/, '$1 included'], [/^(\d+) scraps incluídos$/, '$1 scrap records included'],
@@ -581,6 +651,8 @@ function translateDynamicText(text, locale) {
     [/^(.+) detectado acima do limite configurado$/, (_, eventName) => `${i18nMessages.en[eventName] || eventName} detected above the configured threshold`],
     [/^(.+): ocorrência acima do limite configurado no posto (.+)$/, (_, defect, station) => `${i18nMessages.en[defect] || defect}: occurrence above the configured threshold at ${i18nMessages.en[station] || station}`]
   ] : [
+    [/^([\d.,]+)% do IF Cost$/, 'IF Cost의 $1%'],
+    [/^Meta do período: (.+)$/, '기간 목표: $1'], [/^US\$\s*([\d.,]+) (acima|abaixo) da meta do período$/, (_, amount, position) => `기간 목표보다 US$ ${amount} ${position === 'acima' ? '초과' : '미만'}`],
     [/^(\d+) transações$/, '$1건의 거래'], [/^(\d+) registros$/, '$1건의 기록'], [/^(\d+) alertas$/, '$1개의 알림'], [/^(\d+) unidades$/, '$1개'], [/^(\d+) ocorrências$/, '$1건'],
     [/^(\d+) un\.$/, '$1개'], [/^(\d+) un\. · (\d+) registros$/, '$1개 · $2건'], [/^(\d+) registros · (\d+) un\.$/, '$1건 · $2개'],
     [/^(\d+) registros · página (\d+) de (\d+)$/, '$1건 · $2 / $3 페이지'], [/^(\d+) incluídos$/, '$1건 포함'], [/^(\d+) scraps incluídos$/, '스크랩 $1건 포함'],
@@ -651,7 +723,10 @@ function field(label, id, options, value = '') {
   const optionLabels = { 'Acumulado 2026 vs 2025': 'Acumulado 2026 × PY', 'Mesmo período 2025': 'Mesmo período PY' };
   return `<div class="field"><label for="${id}">${label}</label><select class="control" id="${id}" data-filter="${id}">${options.map((o) => `<option value="${o}" ${o === value ? 'selected' : ''}>${optionLabels[o] || o}</option>`).join('')}</select></div>`;
 }
-function kpiCard(label, value, detail = '', tone = '') { return `<article class="kpi-card ${tone}"><span class="kpi-label">${label}</span><strong class="kpi-value">${value}</strong>${detail ? `<span class="kpi-detail">${detail}</span>` : ''}</article>`; }
+function kpiCard(label, value, detail = '', tone = '', help = '') {
+  const helper = help ? `<span class="metric-help kpi-help" tabindex="0" role="button" aria-label="Entenda esta métrica"><b aria-hidden="true">!</b><span class="metric-tooltip" role="tooltip"><strong>Como avaliar esta métrica?</strong>${help}</span></span>` : '';
+  return `<article class="kpi-card ${tone} ${help ? 'has-help' : ''}">${helper}<span class="kpi-label">${label}</span><strong class="kpi-value">${value}</strong>${detail ? `<span class="kpi-detail">${detail}</span>` : ''}</article>`;
+}
 function filtersPanel(fields, footer = '') { return `<section class="filter-panel" aria-label="Filtros"><div class="filters">${fields}</div>${footer ? `<div class="filter-footer">${footer}</div>` : ''}</section>`; }
 function tablePanel(title, headers, rows, options = {}) {
   return `<section class="table-panel">${title ? `<header class="panel-header"><h2>${title}</h2>${options.headerAction || ''}</header>` : ''}<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th class="${h.number ? 'number' : ''}">${h.label}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}"><div class="empty-state">Nenhum registro encontrado.</div></td></tr>`}</tbody></table></div>${options.pagination || ''}</section>`;
@@ -665,7 +740,7 @@ function aggregateTransactions(data, key) {
   }, new Map()).values()].sort((a, b) => b.value - a.value);
 }
 function contextLabel(key) {
-  return ({ module: 'Material', partNumber: 'Part Number', line: 'Linha', transactionId: 'Transação', alertId: 'Alerta', executionId: 'Execução', source: 'Origem' })[key] || key;
+  return ({ component: 'Componente', partNumber: 'Part Number', scrapLine: 'Linha do scrap', transactionId: 'Transação', alertId: 'Alerta', executionId: 'Execução', source: 'Origem' })[key] || key;
 }
 function setExplorationContext(next = {}, source = 'navegação') {
   state.context = { ...state.context, ...next, source };
@@ -689,7 +764,7 @@ function initCharts() {
     const count = Math.max(data.valuesA.length, data.valuesB.length), labels = Array.from({ length: count }, (_, i) => `${String(i + 1).padStart(2, '0')}/08`);
     const series = [{ name: '2026', type: 'line', data: data.valuesA, smooth: .2, symbol: 'circle', symbolSize: 5, lineStyle: { width: 3, color: main }, itemStyle: { color: main } }];
     if (data.valuesB.length) series.push({ name: '2025', type: 'line', data: data.valuesB, smooth: .2, symbol: 'none', lineStyle: { width: 3, color: secondary }, itemStyle: { color: secondary } });
-    if (data.target) series.push({ name: 'Meta', type: 'line', data: Array(count).fill(data.target), symbol: 'none', lineStyle: { width: 1.5, type: 'dashed', color: muted }, itemStyle: { color: muted } });
+    if (data.target) series.push({ name: 'Meta', type: 'line', data: Array.isArray(data.target) ? data.target : Array(count).fill(data.target), symbol: 'none', lineStyle: { width: 1.5, type: 'dashed', color: muted }, itemStyle: { color: muted } });
     const instance = echarts.init(element, null, { renderer: 'svg' });
     instance.setOption({ animationDuration: 350, grid: { left: 12, right: 12, top: 15, bottom: 22, containLabel: true }, xAxis: { type: 'category', boundaryGap: false, data: labels, axisLine: { lineStyle: { color: grid } }, axisTick: { show: false }, axisLabel: { color: text, fontFamily: 'Fustat Variable', fontSize: 10, interval: Math.max(0, Math.floor(count / 6) - 1) } }, yAxis: { type: 'value', splitNumber: 3, splitLine: { lineStyle: { color: grid } }, axisLabel: { show: false } }, tooltip: { trigger: 'axis', backgroundColor: css.getPropertyValue('--app-surface-raised').trim(), borderColor: css.getPropertyValue('--app-border').trim(), textStyle: { color: css.getPropertyValue('--app-text').trim(), fontFamily: 'Fustat Variable', fontSize: 12 }, formatter(params) { const current = params.find(p => p.seriesName === '2026'), previous = params.find(p => p.seriesName === '2025'); const difference = current && previous ? `<br>Diferença: ${(current.value - previous.value).toLocaleString('pt-BR')}` : ''; return `<strong>${params[0]?.axisValue || ''}</strong><br>${params.map(p => `${p.marker} ${p.seriesName}: ${Number(p.value).toLocaleString('pt-BR')}`).join('<br>')}${difference}`; } }, series });
     chartInstances.push(instance);
@@ -721,38 +796,83 @@ const dashboardChartPresets = {
   Mensal: { title: 'Evolução mensal do IF Cost', current: [168,174,161,184,176,169,181,184], previous: [188,201,194,211,205,198,216,212], target: 181 }
 };
 
+function accumulateValues(values) {
+  let total = 0;
+  return values.map((value) => (total += value));
+}
+
+function buildDashboardEvolution(rows, view) {
+  const daily = Array(12).fill(0);
+  rows.forEach((row) => {
+    const day = Number(row.transactionDate.slice(0, 2));
+    if (day >= 1 && day <= daily.length) daily[day - 1] += row.ifCost / 1000;
+  });
+  const currentTotal = daily.reduce((sum, value) => sum + value, 0);
+  const fullTotal = model.transactions.reduce((sum, row) => sum + row.ifCost, 0) / 1000;
+  const share = fullTotal ? currentTotal / fullTotal : 0;
+  const previousTotal = 212.3 * share;
+  const previousScale = currentTotal ? previousTotal / currentTotal : 0;
+  const previousDaily = daily.map((value) => value * previousScale);
+  const targetTotal = previousTotal * .85;
+  if (view === 'Diário') return { current: daily, previous: previousDaily, target: Array(daily.length).fill(targetTotal / daily.length) };
+  if (view === 'Semanal') {
+    const groupPairs = (values) => Array.from({ length: 6 }, (_, index) => values[index * 2] + values[index * 2 + 1]);
+    return { current: groupPairs(daily), previous: groupPairs(previousDaily), target: Array(6).fill(targetTotal / 6) };
+  }
+  if (view === 'Mensal') {
+    const preset = dashboardChartPresets.Mensal;
+    return { current: preset.current.map((value) => value * share), previous: preset.previous.map((value) => value * share), target: Array(preset.current.length).fill(preset.target * share) };
+  }
+  return { current: accumulateValues(daily), previous: accumulateValues(previousDaily), target: Array(daily.length).fill(targetTotal) };
+}
+
 function renderDashboard() {
-  const factor = state.dashboardFactor;
   const filters = state.dashboardFilters;
   const dashboardRows = model.transactions.filter((row) =>
-    (filters.period !== 'Últimos 7 dias' || Number(row.date.slice(0, 2)) >= 6) &&
-    (filters.division === 'Todas' || row.division === filters.division) &&
-    (filters.department === 'Todos' || row.department === filters.department) &&
-    (filters.line === 'Todas' || row.line === filters.line) &&
-    (filters.family === 'Todas' || row.family === filters.family) &&
-    (filters.module === 'Todos' || row.module === filters.module));
+    (filters.period !== 'Últimos 7 dias' || Number(row.transactionDate.slice(0, 2)) >= 6) &&
+    (filters.item === 'Todos' || row.component === filters.item) &&
+    (filters.partNumber === 'Todos' || row.partNumber === filters.partNumber) &&
+    (filters.scrapLine === 'Todas' || row.scrapLine === filters.scrapLine));
   const total = dashboardRows.reduce((sum, row) => sum + row.ifCost, 0);
+  const fullTotal = model.transactions.reduce((sum, row) => sum + row.ifCost, 0);
+  const factor = fullTotal ? total / fullTotal : 0;
+  state.dashboardFactor = factor;
+  const previousTotal = 212300 * factor;
+  const targetTotal = previousTotal * (1 + model.settings.target / 100);
+  const reduction = previousTotal ? (total / previousTotal - 1) * 100 : 0;
+  const gapPp = reduction - model.settings.target;
+  const gapCost = total - targetTotal;
+  const gapDetail = `${formatCurrency(Math.abs(gapCost))} ${gapCost >= 0 ? 'acima' : 'abaixo'} da meta do período`;
   const totalQty = dashboardRows.reduce((sum, row) => sum + row.qty, 0);
-  const offenders = aggregateTransactions(dashboardRows, 'module').slice(0, 3);
-  const fields = field('Período', 'dash-period', ['01/08/2026 — 12/08/2026', 'Últimos 7 dias', 'Agosto/2026'], filters.period) + field('Visão', 'dash-view', ['Acumulado', 'Diário', 'Semanal', 'Mensal'], filters.view) + field('Division', 'dash-division', ['Todas', 'HE', 'VS'], filters.division) + field('Departamento', 'dash-department', ['Todos', ...departments], filters.department) + field('Linha', 'dash-line', ['Todas', ...lines], filters.line) + field('Família', 'dash-family', ['Todas', ...families], filters.family) + field('Material', 'dash-module', ['Todos', ...modules], filters.module);
-  const attention = dashboardRows.filter((row) => row.ifCost > 1800).sort((a, b) => b.ifCost - a.ifCost).slice(0, 5).map((row) => `<tr><td>${row.date.slice(0,5)}</td><td>${row.department}</td><td>${row.line}</td><td>${row.family}</td><td>${row.product}</td><td><strong>${row.module}</strong><small class="cell-stack">${row.defect}</small></td><td class="number">${row.qty}</td><td class="number"><strong>${formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status==='Justificado'?'Ver revisão':'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('');
-  const offenderCards = offenders.length ? offenders.map((item, index) => `<article class="offender-row"><span class="offender-rank">${index + 1}</span><div><strong>${item.label}</strong><small>${formatNumber(item.qty)} un. · ${item.count} registros</small><div class="bar-track"><i style="width:${item.value / offenders[0].value * 100}%"></i></div></div><b>${formatCurrency(item.value * factor, true)}</b><div class="table-actions">${button('Explorar na Base','dashboard-explore',{small:true,primary:true,id:item.label})}</div></article>`).join('') : '<div class="empty-state compact">Nenhum registro para os filtros selecionados.</div>';
-  return `<section class="page-stack">${pageHeader('Dashboard de Scrap', `${button('Atualizar','refresh-dashboard',{icon:'refresh'})}${button('Exportar dados','export-dashboard',{icon:'download'})}${button('Gerar relatório','go-reports',{icon:'report'})}`)}<section class="automation-banner">${icon('refresh')}<div><strong>Fluxo automatizado ativo</strong><span>GERP → processamento Hanaro → indicadores → investigação → relatório</span></div><small>Última execução concluída às 05:08</small></section>${filtersPanel(fields, `<span class="filter-note">Filtros atualizam indicadores e rankings</span><button class="link-button" data-action="clear-dashboard">Limpar filtros</button>`)}<section class="kpi-grid">${kpiCard('IF Cost acumulado', formatCurrency(total*factor), filters.period)}${kpiCard('Mesmo período 2025', formatCurrency(212300*factor), '↓ US$ 28.040')}${kpiCard('Redução <span class="metric-tag" title="Previous Year">PY</span>', formatPercentage(-13.2/factor), 'Meta anual: -15%', 'success')}${kpiCard('Gap para meta', `${(1.8*factor).toLocaleString('pt-BR',{maximumFractionDigits:1})} p.p.`, 'US$ 3.805 acima do target', 'danger')}${kpiCard('Scrap registrado', `${formatNumber(Math.round(totalQty*factor))} un.`, `${dashboardRows.length} transações`)}</section><section class="content-grid"><article class="panel"><header class="panel-header"><div><h2>Evolução diária do IF Cost</h2><p class="panel-description">Comparativo automático 2026, 2025 e meta</p></div></header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">2026</span><span class="legend-key" style="--key:var(--chart-secondary)">2025</span><span class="legend-key" style="--key:var(--app-text-muted)">Meta</span></div>${lineChart([8,9,11,14,18,23,25,22,24,27,26,29].map(v=>v*factor),[12,13,17,20,19,18,25,28,31,29,33,35],24)}</article><article class="panel offender-panel"><header class="panel-header"><div><h2 class="metric-title">Top ofensores <span class="metric-help" tabindex="0" role="button" aria-label="Como o IF Cost é calculado">${icon('alert')}<span class="metric-tooltip" role="tooltip"><strong>O que é IF Cost?</strong> É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.</span></span> IF Cost</h2><p class="panel-description">Ponto de partida para investigação</p></div></header>${offenderCards}</article></section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Pareto de componentes</h2></header>${barList(aggregateTransactions(dashboardRows,'partNumber').slice(0,5))}</article><article class="panel"><header class="panel-header"><h2>IF Cost por departamento</h2></header>${barList(aggregateTransactions(dashboardRows,'department'))}</article></section>${tablePanel('Ocorrências que exigem atenção',[{label:'Data'},{label:'Departamento'},{label:'Linha'},{label:'Família'},{label:'Produto'},{label:'Componente'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Status'},{label:'Ações'}],attention)}</section>`;
+  const offenders = aggregateTransactions(dashboardRows, 'component').slice(0, 3);
+  const evolution = buildDashboardEvolution(dashboardRows, filters.view);
+  const fields = field('Período', 'dash-period', ['01/08/2026 — 12/08/2026', 'Últimos 7 dias', 'Agosto/2026'], filters.period) + field('Visão', 'dash-view', ['Acumulado', 'Diário', 'Semanal', 'Mensal'], filters.view) + field('Item / Componente', 'dash-item', ['Todos', ...components], filters.item) + field('Part Number', 'dash-part-number', ['Todos', ...partNumbers], filters.partNumber) + field('Linha do scrap', 'dash-scrap-line', ['Todas', ...scrapLines], filters.scrapLine);
+  const attention = dashboardRows.filter((row) => row.ifCost > 1800).sort((a, b) => b.ifCost - a.ifCost).slice(0, 5).map((row) => `<tr><td>${row.transactionDate.slice(0,5)}</td><td><strong>${row.partNumber}</strong><small class="cell-stack">${row.itemDescription}</small></td><td>${row.component}</td><td>${row.scrapLine}</td><td class="number">${row.qty}</td><td class="number"><strong>${formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status==='Justificado'?'Ver revisão':'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('');
+  const offenderCards = offenders.length ? offenders.map((item) => {
+    const share = total ? item.value / total * 100 : 0;
+    return `<article class="offender-row"><div class="offender-main"><div class="offender-copy"><strong>${item.label}</strong><small>${formatNumber(item.qty)} un. · ${item.count} registros</small></div><div class="offender-impact"><small>Impacto no período</small><b>${formatCurrency(item.value, true)}</b></div></div><div class="offender-meta"><span>${share.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% do IF Cost</span>${button('Ver na Base','dashboard-explore',{small:true,id:item.label,icon:'chevronRight'})}</div></article>`;
+  }).join('') : '<div class="empty-state compact">Nenhum registro para os filtros selecionados.</div>';
+  return `<section class="page-stack">${pageHeader('Dashboard de Scrap', `${button('Atualizar','refresh-dashboard',{icon:'refresh'})}${button('Exportar dados','export-dashboard',{icon:'download'})}${button('Gerar relatório','go-reports',{icon:'report'})}`)}<section class="automation-banner">${icon('refresh')}<div><strong>Fluxo automatizado ativo</strong><span>GERP → processamento Hanaro → indicadores → investigação → relatório</span></div><small>Última execução concluída às 05:08</small></section>${filtersPanel(fields, `<button class="link-button" data-action="clear-dashboard">Limpar filtros</button>`)}<section class="kpi-grid">${kpiCard('IF Cost acumulado', formatCurrency(total), filters.period)}${kpiCard('Mesmo período 2025', formatCurrency(previousTotal), 'Comparação com o ano anterior', '', 'PY significa Previous Year (ano anterior). Este valor representa o IF Cost do mesmo intervalo de datas de 2025 e serve como referência para calcular a redução de 2026.')}${kpiCard('Redução vs 2025', formatPercentage(reduction), `Meta do período: ${formatPercentage(model.settings.target)}`, 'success', 'Compara o IF Cost atual com o mesmo período de 2025. Quanto maior a redução do custo, melhor. A meta é reduzir 15%; o gap mostra quanto ainda falta em pontos percentuais.')}${kpiCard('Gap para meta', `${Math.abs(gapPp).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} p.p.`, gapDetail, gapCost >= 0 ? 'danger' : 'success')}${kpiCard('Scrap registrado', `${formatNumber(totalQty)} un.`, `${dashboardRows.length} transações`)}</section><section class="content-grid"><article class="panel"><header class="panel-header"><div><h2>Evolução diária do IF Cost</h2><p class="panel-description">Comparativo automático 2026, 2025 e meta</p></div></header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">2026</span><span class="legend-key" style="--key:var(--chart-secondary)">2025</span><span class="legend-key" style="--key:var(--app-text-muted)">Meta fixa</span></div>${lineChart(evolution.current,evolution.previous,evolution.target)}</article><article class="panel offender-panel"><header class="panel-header"><div><h2 class="metric-title">Top ofensores <span class="metric-help" tabindex="0" role="button" aria-label="Como o IF Cost é calculado"><b aria-hidden="true">!</b><span class="metric-tooltip" role="tooltip"><strong>O que é IF Cost?</strong> É o custo das perdas internas de produção. Cada registro considera o valor local do scrap convertido para USD pela taxa de câmbio aplicável. O ranking soma esse custo por componente e ordena do maior para o menor.</span></span> IF Cost</h2><p class="panel-description">Ponto de partida para investigação</p></div></header>${offenderCards}</article></section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Pareto de Part Numbers</h2></header>${barList(aggregateTransactions(dashboardRows,'partNumber').slice(0,5))}</article><article class="panel"><header class="panel-header"><h2>IF Cost por linha de scrap</h2></header>${barList(aggregateTransactions(dashboardRows,'scrapLine'))}</article></section>${tablePanel('Ocorrências que exigem atenção',[{label:'Data'},{label:'Part Number / Descrição'},{label:'Componente'},{label:'Linha do scrap'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Status da revisão'},{label:'Ações'}],attention)}</section>`;
 }
 
 function filteredTransactions() {
   const q = state.scrapSearch.toLowerCase();
   const contextualAlert = state.context.alertId ? model.alerts.find((alert) => alert.id === state.context.alertId) : null;
   let data = model.transactions.filter((t) =>
-    (!q || [t.id,t.partNumber,t.product,t.executionId,t.module,t.defect,t.occurrence,t.station].some((v) => v.toLowerCase().includes(q))) &&
-    (state.scrapFilters.date==='Todas as datas'||state.scrapFilters.date==='Agosto/2026'||(state.scrapFilters.date==='Hoje'&&t.date==='12/08/2026')||(state.scrapFilters.date==='Últimos 7 dias'&&Number(t.date.slice(0,2))>=6)) &&
-    (state.scrapFilters.division==='Todas'||t.division===state.scrapFilters.division) &&
-    (state.scrapFilters.department==='Todos'||t.department===state.scrapFilters.department) &&
-    (state.scrapFilters.line==='Todas'||t.line===state.scrapFilters.line) &&
+    (!q || [t.id,t.partNumber,t.itemDescription,t.component,t.accountAlias,t.executionId].some((v) => String(v).toLowerCase().includes(q))) &&
+    (state.scrapFilters.date==='Todas as datas'||state.scrapFilters.date==='Agosto/2026'||(state.scrapFilters.date==='Hoje'&&t.transactionDate==='12/08/2026')||(state.scrapFilters.date==='Últimos 7 dias'&&Number(t.transactionDate.slice(0,2))>=6)) &&
+    (state.scrapFilters.accountAlias==='Todos'||t.accountAlias===state.scrapFilters.accountAlias) &&
+    (state.scrapFilters.processingStatus==='Todos'||t.processingStatus===state.scrapFilters.processingStatus) &&
     (state.scrapFilters.reviewStatus==='Todos'||t.review.status===state.scrapFilters.reviewStatus) &&
-    (!state.context.module || t.module === state.context.module) &&
+    (state.scrapAdvancedFilters.organizationCode==='Todas'||t.organizationCode===state.scrapAdvancedFilters.organizationCode) &&
+    (state.scrapAdvancedFilters.subinventoryGroup==='Todos'||t.subinventoryGroup===state.scrapAdvancedFilters.subinventoryGroup) &&
+    (state.scrapAdvancedFilters.subinventory==='Todos'||t.subinventory===state.scrapAdvancedFilters.subinventory) &&
+    (state.scrapAdvancedFilters.warehouseMarket==='Todos'||t.warehouseMarket===state.scrapAdvancedFilters.warehouseMarket) &&
+    (state.scrapAdvancedFilters.receiptDepartment==='Todos'||t.receiptDepartment===state.scrapAdvancedFilters.receiptDepartment) &&
+    (state.scrapAdvancedFilters.partNumber==='Todos'||t.partNumber===state.scrapAdvancedFilters.partNumber) &&
+    (!state.context.component || t.component === state.context.component) &&
     (!state.context.partNumber || t.partNumber === state.context.partNumber) &&
-    (!state.context.line || t.line === state.context.line) &&
+    (!state.context.scrapLine || t.scrapLine === state.context.scrapLine) &&
     (!state.context.transactionId || t.id === state.context.transactionId) &&
     (!contextualAlert?.transactionIds.length || contextualAlert.transactionIds.includes(t.id)) &&
     (!state.context.executionId || t.executionId === state.context.executionId));
@@ -767,13 +887,13 @@ function pagination(total) {
 function renderScrap() {
   if(state.scrapView==='review') return renderScrapReview();
   const filtered = filteredTransactions(), start = (state.scrapPage-1)*state.scrapPageSize, data = filtered.slice(start,start+state.scrapPageSize);
-  const rows = data.map((t) => `<tr data-row-id="${t.id}" data-row-type="transaction" class="${state.selectedScrapIds.includes(t.id)?'selected-row':''}" title="${t.occurrence}"><td><input type="checkbox" data-action="toggle-scrap" data-id="${t.id}" aria-label="Selecionar ${t.id}" ${state.selectedScrapIds.includes(t.id)?'checked':''}></td><td>${t.date}</td><td>${t.department}<small class="cell-stack">${t.line}</small></td><td>${t.product}<small class="cell-stack">${t.family}</small></td><td><strong>${t.partNumber}</strong><small class="cell-stack">${t.module}</small><small class="cell-stack cell-defect">${t.defect}</small></td><td class="number">${t.qty}</td><td class="number"><strong>${t.ifCost ? formatCurrency(t.ifCost) : '—'}</strong></td><td>${badge(t.review.status)}</td><td>${button(t.review.status==='Justificado'?'Ver revisão':'Revisar','review-one',{small:true,id:t.id})}</td></tr>`).join('');
+  const rows = data.map((t) => `<tr data-row-id="${t.id}" data-row-type="transaction" class="${state.selectedScrapIds.includes(t.id)?'selected-row':''}" title="${t.occurrence}"><td><input type="checkbox" data-action="toggle-scrap" data-id="${t.id}" aria-label="Selecionar ${t.id}" ${state.selectedScrapIds.includes(t.id)?'checked':''}></td><td>${t.transactionDate}</td><td>${t.organizationCode}</td><td>${t.accountAlias}</td><td><strong>${t.partNumber}</strong><small class="cell-stack">${t.itemDescription}</small></td><td>${t.component}</td><td class="number">${t.qty}</td><td class="number"><strong>${t.ifCost ? formatCurrency(t.ifCost) : '—'}</strong></td><td>${badge(t.processingStatus)}</td><td>${badge(t.review.status)}</td><td>${button(t.review.status==='Justificado'?'Ver revisão':'Revisar','review-one',{small:true,id:t.id})}</td></tr>`).join('');
   const ifCost=filtered.reduce((sum,row)=>sum+row.ifCost,0),qty=filtered.reduce((sum,row)=>sum+row.qty,0),share=ifCost/model.transactions.reduce((sum,row)=>sum+row.ifCost,0)*100;
   const ranking=aggregateTransactions(filtered,'partNumber').slice(0,8);
   const selected=model.transactions.filter(row=>state.selectedScrapIds.includes(row.id));
   const sortLabel=(label,key)=>`<button class="sort-button" data-action="sort-scrap" data-key="${key}">${label}${state.scrapSort.key===key?(state.scrapSort.direction==='asc'?' ↑':' ↓'):''}</button>`;
   const selectionBar=selected.length?`<section class="selection-bar"><div><strong>${selected.length} registro${selected.length>1?'s':''} selecionado${selected.length>1?'s':''}</strong><span>${formatNumber(selected.reduce((sum,row)=>sum+row.qty,0))} un. · ${formatCurrency(selected.reduce((sum,row)=>sum+row.ifCost,0))}</span></div>${button('Limpar seleção','clear-scrap-selection')}${button('Justificar selecionados','review-selected',{primary:true,icon:'check'})}</section>`:'';
-  return `<section class="page-stack">${pageHeader('Base de Scrap',button('Exportar dados','export-scrap',{icon:'download'}))}<section class="filter-panel context-panel scrap-filter-panel">${contextTrail()}<div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="scrap-search" value="${state.scrapSearch}" placeholder="Buscar Part Number, produto ou ID..." aria-label="Buscar registros de scrap"></div><button class="btn" data-action="more-filters">${icon('filter')}Mais filtros</button></div><div class="scrap-filter-grid">${field('Data da transação','scrap-date',['Todas as datas','Hoje','Últimos 7 dias','Agosto/2026'],state.scrapFilters.date)}${field('Division','scrap-division',['Todas','HE','VS'],state.scrapFilters.division)}${field('Departamento','scrap-department',['Todos',...departments],state.scrapFilters.department)}${field('Linha','scrap-line',['Todas',...lines],state.scrapFilters.line)}${field('Status da revisão','scrap-review-status',['Todos','Pendente de revisão','Em revisão','Justificado'],state.scrapFilters.reviewStatus)}</div></section>${selectionBar}<section class="kpi-grid">${kpiCard('IF Cost filtrado',formatCurrency(ifCost))}${kpiCard('QTY filtrada',formatNumber(qty))}${kpiCard('Participação no total',`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`)}${kpiCard('Pendentes de revisão',formatNumber(filtered.filter(row=>row.review.status!=='Justificado').length))}${kpiCard('Justificados',formatNumber(filtered.filter(row=>row.review.status==='Justificado').length))}</section><section class="panel ranking-panel"><header class="panel-header"><div><h2>Ranking de Part Numbers</h2><p class="panel-description">Use o ranking para filtrar; selecione registros na tabela para justificá-los.</p></div></header><div class="ranking-grid">${ranking.map((item,index)=>`<button class="ranking-item" data-action="drill-part" data-id="${item.label}"><span>${index+1}</span><div><strong>${item.label}</strong><small>${item.count} registros · ${formatNumber(item.qty)} un.</small><i><b style="width:${item.value/ranking[0].value*100}%"></b></i></div><em>${formatCurrency(item.value)}</em>${icon('chevronRight')}</button>`).join('')||'<div class="empty-state">Nenhum Part Number no contexto atual.</div>'}</div></section>${tablePanel('Registros de scrap',[{label:`<input type="checkbox" data-action="select-visible-scrap" aria-label="Selecionar registros visíveis" ${data.length&&data.every(row=>state.selectedScrapIds.includes(row.id))?'checked':''}>`},{label:sortLabel('Data','date')},{label:'Departamento / Linha'},{label:'Produto / Família'},{label:sortLabel('Part Number','partNumber')},{label:sortLabel('QTY','qty'),number:true},{label:sortLabel('IF Cost','ifCost'),number:true},{label:'Revisão'},{label:'Ação'}],rows,{pagination:pagination(filtered.length)})}</section>`;
+  return `<section class="page-stack">${pageHeader('Base de Scrap',button('Exportar dados','export-scrap',{icon:'download'}))}<section class="filter-panel context-panel scrap-filter-panel">${contextTrail()}<div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="scrap-search" value="${state.scrapSearch}" placeholder="Buscar Part Number, descrição ou ID..." aria-label="Buscar registros de scrap"></div><button class="btn" data-action="more-filters">${icon('filter')}Mais filtros</button></div><div class="scrap-filter-grid">${field('Data da transação','scrap-date',['Todas as datas','Hoje','Últimos 7 dias','Agosto/2026'],state.scrapFilters.date)}${field('Tipo de movimentação','scrap-account-alias',['Todos',...aliases],state.scrapFilters.accountAlias)}${field('Status do registro','scrap-processing-status',['Todos','Validado','Rejeitado','Pendente'],state.scrapFilters.processingStatus)}${field('Status da revisão','scrap-review-status',['Todos','Pendente de revisão','Em revisão','Justificado'],state.scrapFilters.reviewStatus)}</div></section>${selectionBar}<section class="kpi-grid">${kpiCard('IF Cost filtrado',formatCurrency(ifCost))}${kpiCard('QTY filtrada',formatNumber(qty))}${kpiCard('Participação no total',`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`)}${kpiCard('Pendentes de revisão',formatNumber(filtered.filter(row=>row.review.status!=='Justificado').length))}${kpiCard('Justificados',formatNumber(filtered.filter(row=>row.review.status==='Justificado').length))}</section><section class="panel ranking-panel"><header class="panel-header"><div><h2>Ranking de Part Numbers</h2><p class="panel-description">Use o ranking para filtrar; selecione registros na tabela para justificá-los.</p></div></header><div class="ranking-grid">${ranking.map((item,index)=>`<button class="ranking-item" data-action="drill-part" data-id="${item.label}"><span>${index+1}</span><div><strong>${item.label}</strong><small>${item.count} registros · ${formatNumber(item.qty)} un.</small><i><b style="width:${item.value/ranking[0].value*100}%"></b></i></div><em>${formatCurrency(item.value)}</em>${icon('chevronRight')}</button>`).join('')||'<div class="empty-state">Nenhum Part Number no contexto atual.</div>'}</div></section>${tablePanel('Registros de scrap',[{label:`<input type="checkbox" data-action="select-visible-scrap" aria-label="Selecionar registros visíveis" ${data.length&&data.every(row=>state.selectedScrapIds.includes(row.id))?'checked':''}>`},{label:sortLabel('Data','transactionDate')},{label:'Organização'},{label:'Tipo de movimentação'},{label:sortLabel('Part Number / Descrição','partNumber')},{label:'Componente'},{label:sortLabel('QTY','qty'),number:true},{label:sortLabel('IF Cost','ifCost'),number:true},{label:'Status do registro'},{label:'Revisão'},{label:'Ação'}],rows,{pagination:pagination(filtered.length)})}</section>`;
 }
 
 function syncScrapReview() {
@@ -792,25 +912,18 @@ function renderScrapReview() {
   if(!selected.length){state.scrapView='list';return renderScrap();}
   if(!selected.some(row=>row.id===state.activeReviewId))state.activeReviewId=selected[0].id;
   const row=selected.find(item=>item.id===state.activeReviewId),review=row.review;
-  const list=selected.map((item,index)=>`<button class="review-list-item ${item.id===row.id?'active':''}" data-action="select-review-item" data-id="${item.id}"><span>${index+1}</span><div><strong>${item.partNumber}</strong><small>${item.defect}</small><small>${item.id} · ${item.line}</small></div>${badge(item.review.status)}</button>`).join('');
-  return `<section class="page-stack review-subpage">${pageHeader('Revisar registros de scrap',`${button('Voltar para a Base','back-scrap',{icon:'chevronLeft'})}${button('Salvar rascunho','save-scrap-review')}${button(`Concluir ${selected.length} revisão${selected.length>1?'ões':''}`,'conclude-scrap-review',{primary:true,icon:'check'})}`)}<div class="review-context"><span>Base de Scrap</span>${icon('chevronRight')}<strong>${selected.length} registro${selected.length>1?'s':''} selecionado${selected.length>1?'s':''}</strong></div><div class="review-layout"><aside class="review-list"><header><h2>Seleção</h2><p>A justificativa pode ser revisada item a item.</p></header>${list}<footer><strong>${formatCurrency(selected.reduce((sum,item)=>sum+item.ifCost,0))}</strong><span>${formatNumber(selected.reduce((sum,item)=>sum+item.qty,0))} unidades</span></footer></aside><article class="review-workspace"><section class="review-facts"><header><div><span class="block-kicker">Registro de scrap</span><h2>${row.partNumber} · ${row.product}</h2><p>${row.id}</p></div>${badge(review.status)}</header><div class="meta-grid">${[['Data',row.date],['Departamento',row.department],['Linha',row.line],['Módulo',row.module],['QTY',`${row.qty} un.`],['IF Cost',formatCurrency(row.ifCost)],['Origem',row.source],['Execução',row.executionId]].map(([label,value])=>`<div class="meta-item"><small>${label}</small><strong>${value}</strong></div>`).join('')}</div></section><section class="review-form"><header><div><span class="block-kicker">Revisão humana</span><h2>Justificativa do scrap</h2><p>Explique por que o item foi registrado como scrap. Os campos serão auditados.</p></div><label class="checkbox-row"><input id="review-include-report" type="checkbox" ${review.includeInReport?'checked':''}> Incluir no próximo relatório</label></header><div class="form-grid">${field('Categoria da justificativa','review-category',['Selecione...','Material','Processo','Máquina','Mão de obra','Engenharia','Fornecedor','Outro'],review.category)}<div class="field"><label for="review-responsible">Revisor responsável</label><input class="control" id="review-responsible" value="${review.responsible}"></div><div class="field full"><label for="review-reason">Justificativa obrigatória</label><textarea class="control" id="review-reason" placeholder="Descreva o motivo deste registro de scrap...">${review.reason}</textarea></div><div class="field full"><label class="checkbox-row cause-toggle"><input id="review-requires-cause" type="checkbox" ${review.requiresCause?'checked':''}> Este item exige análise de causa detalhada</label><p class="field-help">Ative somente quando a justificativa simples não for suficiente para explicar o scrap.</p></div>${review.requiresCause?`<div class="field full"><span class="field-label">Classificação 4M</span><div class="choice-group">${['Machine','Method','Material','Man'].map(value=>`<button class="choice ${review.classification4m.includes(value)?'selected':''}" data-action="toggle-review-4m" data-value="${value}">${value}</button>`).join('')}</div></div><div class="field full"><label for="review-root-cause">Causa identificada</label><textarea class="control" id="review-root-cause" placeholder="Registre a causa validada...">${review.rootCause}</textarea></div><div class="field"><label for="review-corrective">Ação corretiva</label><input class="control" id="review-corrective" value="${review.corrective}" placeholder="Ação imediata"></div><div class="field"><label for="review-preventive">Ação preventiva</label><input class="control" id="review-preventive" value="${review.preventive}" placeholder="Prevenção de recorrência"></div>`:''}</div><section class="review-evidence"><header><div><h3>Evidências (${review.evidence.length})</h3><p>Fotos, documentos ou comentários vinculados ao registro.</p></div>${button('Adicionar evidência','add-review-evidence',{small:true,icon:'plus'})}</header>${review.evidence.length?review.evidence.map(item=>`<span class="badge brand">${icon('file')}${item}</span>`).join(' '):'<div class="review-empty">Nenhuma evidência adicionada.</div>'}</section></section>${selected.length>1?`<label class="apply-all"><input id="review-apply-all" type="checkbox" checked><span><strong>Aplicar esta justificativa aos ${selected.length} registros selecionados</strong><small>Você ainda pode abrir cada item e ajustar dados individuais antes de concluir.</small></span></label>`:''}</article></div></section>`;
+  const list=selected.map((item,index)=>`<button class="review-list-item ${item.id===row.id?'active':''}" data-action="select-review-item" data-id="${item.id}"><span>${index+1}</span><div><strong>${item.partNumber}</strong><small>${item.itemDescription}</small><small>${item.id} · ${item.scrapLine}</small></div>${badge(item.review.status)}</button>`).join('');
+  return `<section class="page-stack review-subpage">${pageHeader('Revisar registros de scrap',`${button('Voltar para a Base','back-scrap',{icon:'chevronLeft'})}${button('Salvar rascunho','save-scrap-review')}${button(`Concluir ${selected.length} revisão${selected.length>1?'ões':''}`,'conclude-scrap-review',{primary:true,icon:'check'})}`)}<div class="review-context"><span>Base de Scrap</span>${icon('chevronRight')}<strong>${selected.length} registro${selected.length>1?'s':''} selecionado${selected.length>1?'s':''}</strong></div><div class="review-layout"><aside class="review-list"><header><h2>Seleção</h2><p>A justificativa pode ser revisada item a item.</p></header>${list}<footer><strong>${formatCurrency(selected.reduce((sum,item)=>sum+item.ifCost,0))}</strong><span>${formatNumber(selected.reduce((sum,item)=>sum+item.qty,0))} unidades</span></footer></aside><article class="review-workspace"><section class="review-facts"><header><div><span class="block-kicker">Registro de scrap</span><h2>${row.partNumber} · ${row.itemDescription}</h2><p>${row.id}</p></div>${badge(review.status)}</header><div class="meta-grid">${[['Data',row.transactionDate],['Organização',row.organizationCode],['Linha do scrap',row.scrapLine],['Componente',row.component],['Subinventário',row.subinventory],['QTY',`${row.qty} un.`],['IF Cost',formatCurrency(row.ifCost)],['Origem',row.source],['Execução',row.executionId]].map(([label,value])=>`<div class="meta-item"><small>${label}</small><strong>${value}</strong></div>`).join('')}</div></section><section class="review-form"><header><div><span class="block-kicker">Revisão humana</span><h2>Justificativa do scrap</h2><p>Explique por que o item foi registrado como scrap. Os campos serão auditados.</p></div><label class="checkbox-row"><input id="review-include-report" type="checkbox" ${review.includeInReport?'checked':''}> Incluir no próximo relatório</label></header><div class="form-grid">${field('Categoria da justificativa','review-category',['Selecione...','Material','Processo','Máquina','Mão de obra','Engenharia','Fornecedor','Outro'],review.category)}<div class="field"><label for="review-responsible">Revisor responsável</label><input class="control" id="review-responsible" value="${review.responsible}"></div><div class="field full"><label for="review-reason">Justificativa obrigatória</label><textarea class="control" id="review-reason" placeholder="Descreva o motivo deste registro de scrap...">${review.reason}</textarea></div><div class="field full"><label class="checkbox-row cause-toggle"><input id="review-requires-cause" type="checkbox" ${review.requiresCause?'checked':''}> Este item exige análise de causa detalhada</label><p class="field-help">Ative somente quando a justificativa simples não for suficiente para explicar o scrap.</p></div>${review.requiresCause?`<div class="field full"><span class="field-label">Classificação 4M</span><div class="choice-group">${['Machine','Method','Material','Man'].map(value=>`<button class="choice ${review.classification4m.includes(value)?'selected':''}" data-action="toggle-review-4m" data-value="${value}">${value}</button>`).join('')}</div></div><div class="field full"><label for="review-root-cause">Causa identificada</label><textarea class="control" id="review-root-cause" placeholder="Registre a causa validada...">${review.rootCause}</textarea></div><div class="field"><label for="review-corrective">Ação corretiva</label><input class="control" id="review-corrective" value="${review.corrective}" placeholder="Ação imediata"></div><div class="field"><label for="review-preventive">Ação preventiva</label><input class="control" id="review-preventive" value="${review.preventive}" placeholder="Prevenção de recorrência"></div>`:''}</div><section class="review-evidence"><header><div><h3>Evidências (${review.evidence.length})</h3><p>Fotos, documentos ou comentários vinculados ao registro.</p></div>${button('Adicionar evidência','add-review-evidence',{small:true,icon:'plus'})}</header>${review.evidence.length?review.evidence.map(item=>`<span class="badge brand">${icon('file')}${item}</span>`).join(' '):'<div class="review-empty">Nenhuma evidência adicionada.</div>'}</section></section>${selected.length>1?`<label class="apply-all"><input id="review-apply-all" type="checkbox" checked><span><strong>Aplicar esta justificativa aos ${selected.length} registros selecionados</strong><small>Você ainda pode abrir cada item e ajustar dados individuais antes de concluir.</small></span></label>`:''}</article></div></section>`;
 }
 
 function renderAlerts() {
-  const visible=model.alerts.filter(a=>state.alertSeverity==='Todas'||a.severity===state.alertSeverity);
-  const rows=visible.map(a=>`<tr data-row-id="${a.id}" data-row-type="alert"><td>${badge(a.severity)}</td><td>${a.dateTime}</td><td><strong>${a.type}</strong><small class="cell-stack">${a.id}</small></td><td>${a.department}<small class="cell-stack">${a.line}</small></td><td>${a.module}</td><td class="number"><strong>${formatCurrency(a.impact)}</strong></td><td class="cell-ellipsis">${a.description}</td><td>${badge(a.status)}</td><td>${a.channel}</td><td>${button('Ver registros','alert-transactions',{small:true,primary:true,id:a.id})}</td></tr>`).join('');
-  const fields=field('Período','alert-period',['Últimos 7 dias','Hoje','Últimos 30 dias'])+field('Severidade','alert-severity',['Todas','Crítico','Alto','Médio'],state.alertSeverity)+field('Tipo','alert-type',['Todos','Objeto estranho na esteira','Defeito de montagem','Falha no teste funcional','Desvio de torque'])+field('Departamento','alert-dept',['Todos',...departments])+field('Linha','alert-line',['Todas',...lines])+field('Componente afetado','alert-module',['Todos',...modules])+field('Status','alert-status',['Todos','Novo','Lido','Arquivado']);
-  return `<section class="page-stack">${pageHeader('Alertas',`${button('Atualizar','refresh-alerts',{icon:'refresh'})}${button('Exportar','export-alerts',{icon:'download'})}${button('Marcar novos como lidos','read-alerts',{primary:true})}`)}${filtersPanel(fields)}<section class="kpi-grid">${kpiCard('Novos',String(model.alerts.filter(a=>a.status==='Novo').length),'Notificações ainda não abertas','danger')}${kpiCard('Críticos','6','','danger')}${kpiCard('Lidos',String(model.alerts.filter(a=>a.status==='Lido').length))}${kpiCard('Enviados por e-mail',String(model.alerts.filter(a=>a.channel.includes('E-mail')).length))}</section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Alertas por dia</h2></header>${barList(['06/08','07/08','08/08','09/08','10/08','11/08','12/08'].map((d,i)=>({label:d,value:[3,6,4,8,5,7,10][i],display:`${[3,6,4,8,5,7,10][i]} alertas`})))}</article><article class="panel"><header class="panel-header"><div><h2>Origem das notificações</h2><p class="panel-description">Alertas apenas comunicam eventos; a revisão ocorre na Base de Scrap.</p></div></header>${barList([{label:'E-mail e plataforma',value:10,display:'10 alertas'},{label:'Somente plataforma',value:10,display:'10 alertas'}])}</article></section>${tablePanel('',[{label:'Severidade'},{label:'Data/Hora'},{label:'Evento'},{label:'Departamento / Linha'},{label:'Módulo'},{label:'Impacto',number:true},{label:'Descrição'},{label:'Leitura'},{label:'Canal'},{label:'Ação'}],rows)}</section>`;
-}
-
-function renderAnalyses() {
-  return '';
-  const selected=model.analyses.find(a=>a.id===state.selectedAnalysis)||model.analyses[0];
-  const related=model.transactions.filter(row=>selected.transactionIds.includes(row.id)||(!selected.transactionIds.length&&row.partNumber===selected.partNumber));
-  const topLines=aggregateTransactions(related,'line').slice(0,3),topParts=aggregateTransactions(related,'partNumber').slice(0,3);
-  const cards=model.analyses.map(a=>`<button class="case-card ${a.id===selected.id?'active':''}" data-action="select-analysis" data-id="${a.id}"><span class="case-card-header"><small>${a.id}</small>${badge(a.severity)}</span><strong>${a.module}</strong><small>${a.line}</small><span class="case-card-footer"><b>${formatCurrency(a.impact)}</b>${badge(a.status)}</span></button>`).join('');
-  const workflow=['Pendente','Em análise','Concluído','Reaberto'];
-  return `<section class="page-stack">${pageHeader('Análise de Causa',`${button('Salvar rascunho','save-analysis')}${button('Adicionar evidência','add-evidence',{icon:'plus'})}${selected.status==='Concluído'?button('Reabrir análise','reopen-analysis',{primary:true}):button('Concluir análise','conclude-analysis',{primary:true})}`)}<div class="split-layout"><aside class="case-list" aria-label="Análises"><div class="case-list-controls"><h2 class="section-title">Análises</h2><p class="panel-description">Pendentes, em andamento e concluídas</p><div class="search-wrap">${icon('search')}<input class="search-control" placeholder="Buscar análise..." aria-label="Buscar análise"></div></div><div class="case-list-items">${cards}</div></aside><article class="case-detail"><div class="workflow-strip">${workflow.map(item=>`<span class="${selected.status===item?'active':''}">${item}</span>`).join('')}</div><section class="detail-hero"><div><small>${selected.id}</small><h2>${selected.module} — ${selected.line}</h2><span>${badge(selected.status)}</span></div><div><small>Impacto financeiro calculado</small><div class="detail-hero-value">${formatCurrency(selected.impact)}</div></div></section><section class="analysis-block system-block"><header><div><span class="block-kicker">Dados do sistema</span><h2>Fatos calculados automaticamente</h2><p>Origem GERP · execução, transações e alertas preservados para rastreabilidade</p></div>${button('Ver transações relacionadas','analysis-transactions',{small:true,id:selected.id})}</header><div class="meta-grid">${[['QTY refugada',`${selected.qty} un.`],['Variação (14d)',formatPercentage(selected.variation)],['Part Number',selected.partNumber],['Departamento',selected.department],['Produto',selected.product],['Data registro',selected.date],['Alertas vinculados',selected.alertIds?.join(', ')||'Nenhum'],['Transações vinculadas',String(related.length)]].map(([l,v])=>`<div class="meta-item"><small>${l}</small><strong>${v}</strong></div>`).join('')}</div><div class="analysis-facts-grid"><article><h3>Histórico de IF Cost — 14 dias</h3>${lineChart([3,4,3,5,6,5,7,6,8,9,8,11,10,14],[],7,130)}</article><article><h3>Top linhas relacionadas</h3>${barList(topLines.length?topLines:[{label:selected.line,value:selected.impact}])}</article><article><h3>Top Part Numbers</h3>${barList(topParts.length?topParts:[{label:selected.partNumber,value:selected.impact}])}</article></div></section><section class="analysis-block user-block"><header><div><span class="block-kicker">Análise do usuário</span><h2>Interpretação e plano de ação</h2><p>Campos preenchidos pelo analista; todas as alterações são auditadas.</p></div><label class="checkbox-row"><input id="include-report" type="checkbox" ${selected.includeInReport?'checked':''}> Incluir no relatório automático</label></header><div class="form-grid"><div class="field"><span class="field-label">Classificação 4M (múltipla escolha)</span><div class="choice-group">${['Machine','Method','Material','Man'].map(v=>`<button class="choice ${selected.selected4m.includes(v)?'selected':''}" data-action="toggle-4m" data-value="${v}">${v}</button>`).join('')}</div></div>${field('Origem provável','analysis-origin',['Ainda não definida','Processo interno / Linha','Fornecedor'],selected.origin)}${field('Sintoma observado','analysis-symptom',['Selecione...','Dano visual','Quebra','Falha elétrica','Montagem incorreta','Componente fora de especificação','Outro'],selected.symptom)}<div class="field"><label for="analysis-cause">Causa raiz</label><input class="control" id="analysis-cause" value="${selected.cause}" placeholder="Hipótese ou causa validada"></div><div class="field full"><label for="analysis-notes">Observações e conclusão técnica</label><textarea class="control" id="analysis-notes" placeholder="Registre evidências, interpretação e conclusão...">${selected.notes}</textarea></div><div class="field"><label for="corrective">Ação corretiva</label><input class="control" id="corrective" value="${selected.corrective}" placeholder="Ação imediata"></div><div class="field"><label for="preventive">Ação preventiva</label><input class="control" id="preventive" value="${selected.preventive}" placeholder="Prevenção de recorrência"></div><div class="field"><label for="responsible">Responsável</label><input class="control" id="responsible" value="${selected.responsible}"></div><div class="field"><label for="deadline">Prazo</label><input class="control" id="deadline" value="${selected.deadline}"></div></div></section><section class="form-section"><header class="panel-header"><h2>Evidências (${selected.evidence.length})</h2></header>${selected.evidence.length?selected.evidence.map(e=>`<span class="badge brand">${icon('file')}${e}</span>`).join(' '):'<p class="panel-description">Nenhuma evidência adicionada neste caso.</p>'}</section></article></div></section>`;
+  const filters=state.alertFilters;
+  const visible=model.alerts.filter(a=>{const day=Number(a.dateTime.slice(0,2));return (filters.period==='Últimos 30 dias'||(filters.period==='Últimos 7 dias'&&day>=6)||(filters.period==='Hoje'&&day===12))&&(filters.severity==='Todas'||a.severity===filters.severity)&&(filters.type==='Todos'||a.type===filters.type)&&(filters.item==='Todos'||a.component===filters.item||a.partNumber===filters.item)&&(filters.status==='Todos'||a.status===filters.status)});
+  const rows=visible.map(a=>`<tr data-row-id="${a.id}" data-row-type="alert"><td>${badge(a.severity)}</td><td>${a.dateTime}</td><td><strong>${a.type}</strong><small class="cell-stack">${a.id}</small></td><td><strong>${a.partNumber}</strong><small class="cell-stack">${a.component}</small><small class="cell-stack">${a.transactionIds.length} registros</small></td><td class="number"><strong>${formatCurrency(a.impact)}</strong></td><td class="cell-ellipsis">${a.description}</td><td>${badge(a.status)}</td><td>${a.channel}</td><td>${button('Ver registros','alert-transactions',{small:true,primary:true,id:a.id})}</td></tr>`).join('');
+  const alertTypes=[...new Set(model.alerts.map(alert=>alert.type))];
+  const fields=field('Período','alert-period',['Últimos 7 dias','Hoje','Últimos 30 dias'],filters.period)+field('Severidade','alert-severity',['Todas','Crítico','Alto','Médio'],filters.severity)+field('Tipo','alert-type',['Todos',...alertTypes],filters.type)+field('Item / Componente','alert-item',['Todos',...components,...partNumbers],filters.item)+field('Status','alert-status',['Todos','Novo','Lido','Arquivado'],filters.status);
+  const alertsByType=[...visible.reduce((map,alert)=>map.set(alert.type,(map.get(alert.type)||0)+1),new Map())].map(([label,value])=>({label,value,display:`${value} alertas`})).sort((a,b)=>b.value-a.value);
+  return `<section class="page-stack">${pageHeader('Alertas',`${button('Atualizar','refresh-alerts',{icon:'refresh'})}${button('Exportar','export-alerts',{icon:'download'})}${button('Marcar novos como lidos','read-alerts',{primary:true})}`)}${filtersPanel(fields)}<section class="kpi-grid">${kpiCard('Novos',String(model.alerts.filter(a=>a.status==='Novo').length),'Notificações ainda não abertas','danger')}${kpiCard('Críticos','6','','danger')}${kpiCard('Lidos',String(model.alerts.filter(a=>a.status==='Lido').length))}${kpiCard('Enviados por e-mail',String(model.alerts.filter(a=>a.channel.includes('E-mail')).length))}</section><section class="content-grid equal"><article class="panel"><header class="panel-header"><h2>Alertas por dia</h2></header>${barList(['06/08','07/08','08/08','09/08','10/08','11/08','12/08'].map((d,i)=>({label:d,value:[3,6,4,8,5,7,10][i],display:`${[3,6,4,8,5,7,10][i]} alertas`})))}</article><article class="panel"><header class="panel-header"><div><h2>Alertas por tipo</h2><p class="panel-description">Alertas apenas comunicam eventos; a revisão ocorre na Base de Scrap.</p></div></header>${barList(alertsByType)}</article></section>${tablePanel('',[{label:'Severidade'},{label:'Data/Hora'},{label:'Evento'},{label:'Item / Componente'},{label:'Impacto',number:true},{label:'Descrição'},{label:'Leitura'},{label:'Canal'},{label:'Ação'}],rows)}</section>`;
 }
 
 function renderReports() {
@@ -818,7 +931,7 @@ function renderReports() {
   let content='';
   const reviewed=model.transactions.filter(row=>row.review.status==='Justificado');
   const included=reviewed.filter(row=>row.review.includeInReport);
-  if(state.reportTab==='gerar') content=`<div class="report-builder"><section><div class="form-grid">${field('Tipo','report-type',['Semanal','Diário','Mensal'],'Semanal')}<div class="field"><label>Período</label><input class="control" id="report-period" value="Semana W33 · 10/08/2026 — 16/08/2026"></div>${field('Comparação','report-compare',['Acumulado 2026 vs 2025','Mesmo período 2025','Sem comparação'])}<div class="field full"><label for="report-observation">Observação do responsável</label><textarea class="control" id="report-observation" placeholder="Comentário opcional para contextualizar o período..."></textarea></div><div class="field full"><span class="field-label">Conteúdo consolidado</span>${['Indicadores e comparativo','Top ofensores','Scraps revisados e suas justificativas'].map(x=>`<label class="checkbox-row"><input type="checkbox" checked> ${x}</label>`).join('')}</div></div><section class="report-analysis-list"><header><div><h2>Registros justificados do período</h2><p>Somente scraps revisados podem compor o relatório.</p></div>${badge(`${included.length} incluídos`,'brand')}</header>${reviewed.map(row=>`<article><button class="report-check ${row.review.includeInReport?'selected':''}" data-action="toggle-report-review" data-id="${row.id}" aria-pressed="${row.review.includeInReport}">${icon('check')}</button><div><strong>${row.partNumber} · ${row.line}</strong><small>${row.review.category} · ${row.review.reason} · ${formatCurrency(row.ifCost)}</small></div>${button('Ver revisão','open-report-review',{small:true,id:row.id})}</article>`).join('')||'<div class="empty-state">Nenhum registro justificado no período.</div>'}</section></section><aside><div class="report-preview"><small class="block-kicker">Preview · W33</small><h2>Relatório de Material Scrap</h2><div class="preview-comparison"><div><small>IF COST REVISADO</small><div class="preview-value">${formatCurrency(included.reduce((sum,row)=>sum+row.ifCost,0)*state.reportFactor)}</div></div><div><small>${included.length} registros</small><div class="positive">Justificados</div></div></div>${lineChart([5,7,6,9,8,11].map(v=>v*state.reportFactor),[4,5,4.5,7,6,9],0,125)}<h3>Justificativas predominantes</h3>${barList(aggregateTransactions(included.length?included:reviewed,'module').slice(0,3))}<div class="preview-foot"><span>${included.length} scraps incluídos</span><span>Revisões rastreáveis</span></div></div><div class="inline-actions report-actions">${button('Gerar PDF','generate-pdf',{icon:'report'})}${button('Gerar Excel','generate-excel',{icon:'download'})}${button('Gerar e registrar versão','register-report',{primary:true,icon:'check'})}</div></aside></div>`;
+  if(state.reportTab==='gerar') content=`<div class="report-builder"><section><div class="form-grid">${field('Tipo','report-type',['Semanal','Diário','Mensal'],'Semanal')}<div class="field"><label>Período</label><input class="control" id="report-period" value="Semana W33 · 10/08/2026 — 16/08/2026"></div>${field('Comparação','report-compare',['Acumulado 2026 vs 2025','Mesmo período 2025','Sem comparação'])}<div class="field full"><label for="report-observation">Observação do responsável</label><textarea class="control" id="report-observation" placeholder="Comentário opcional para contextualizar o período..."></textarea></div><div class="field full"><span class="field-label">Conteúdo consolidado</span>${['Indicadores e comparativo','Top ofensores','Scraps revisados e suas justificativas'].map(x=>`<label class="checkbox-row"><input type="checkbox" checked> ${x}</label>`).join('')}</div></div><section class="report-analysis-list"><header><div><h2>Registros justificados do período</h2><p>Somente scraps revisados podem compor o relatório.</p></div>${badge(`${included.length} incluídos`,'brand')}</header>${reviewed.map(row=>`<article><button class="report-check ${row.review.includeInReport?'selected':''}" data-action="toggle-report-review" data-id="${row.id}" aria-pressed="${row.review.includeInReport}">${icon('check')}</button><div><strong>${row.partNumber} · ${row.component}</strong><small>${row.review.category} · ${row.review.reason} · ${formatCurrency(row.ifCost)}</small></div>${button('Ver revisão','open-report-review',{small:true,id:row.id})}</article>`).join('')||'<div class="empty-state">Nenhum registro justificado no período.</div>'}</section></section><aside><div class="report-preview"><small class="block-kicker">Preview · W33</small><h2>Relatório de Material Scrap</h2><div class="preview-comparison"><div><small>IF COST REVISADO</small><div class="preview-value">${formatCurrency(included.reduce((sum,row)=>sum+row.ifCost,0)*state.reportFactor)}</div></div><div><small>${included.length} registros</small><div class="positive">Justificados</div></div></div>${lineChart([5,7,6,9,8,11].map(v=>v*state.reportFactor),[4,5,4.5,7,6,9],0,125)}<h3>Justificativas predominantes</h3>${barList(aggregateTransactions(included.length?included:reviewed,'component').slice(0,3))}<div class="preview-foot"><span>${included.length} scraps incluídos</span><span>Revisões rastreáveis</span></div></div><div class="inline-actions report-actions">${button('Gerar PDF','generate-pdf',{icon:'report'})}${button('Gerar Excel','generate-excel',{icon:'download'})}${button('Gerar e registrar versão','register-report',{primary:true,icon:'check'})}</div></aside></div>`;
   if(state.reportTab==='versoes'){const rows=model.reports.map(r=>`<tr data-row-id="${r.id}" data-row-type="report"><td><strong>${r.id}</strong><small class="cell-stack">${r.version}</small></td><td>${r.type}</td><td>${r.period}</td><td>${r.generatedAt}</td><td>${r.author}</td><td class="number">${formatCurrency(r.ifCost)}</td><td>${r.reviewIds?.length||0}</td><td>${r.format}</td><td>${badge(r.status)}</td></tr>`).join('');content=tablePanel('',[{label:'ID rastreável'},{label:'Tipo'},{label:'Período'},{label:'Gerado em'},{label:'Gerado por'},{label:'IF Cost',number:true},{label:'Scraps revisados'},{label:'Formato'},{label:'Status'}],rows)}
   if(state.reportTab==='envios'){const rows=model.sends.map((s,i)=>`<tr><td><strong>${s.report}</strong></td><td>${s.recipient}</td><td>${s.channel}</td><td>${s.requestedAt}</td><td>${badge(s.status)}</td><td class="number">${s.attempts}</td><td>${s.status==='Falha'?button('Reenviar','resend-report',{small:true,id:String(i)}):s.status==='Pendente'?button('Simular envio','send-report',{small:true,id:String(i)}):'—'}</td></tr>`).join('');content=tablePanel('',[{label:'Relatório'},{label:'Destinatário'},{label:'Canal'},{label:'Solicitado em'},{label:'Status'},{label:'Tentativas',number:true},{label:'Ação'}],rows)}
   return `<section class="page-stack">${pageHeader('Relatórios',`${button('Exportar histórico','export-reports',{icon:'download'})}${button('Novo relatório','new-report',{icon:'plus',primary:true})}`)}${tabs}${content}</section>`;
@@ -834,18 +947,17 @@ function renderExecutions() {
 function renderAudit() {
   const q=state.auditSearch.toLowerCase(), events=model.audit.filter(e=>(state.auditEntity==='Todas'||e.entity===state.auditEntity)&&(!q||Object.values(e).some(v=>String(v).toLowerCase().includes(q))));
   const rows=events.map(e=>`<tr data-row-id="${e.id}" data-row-type="audit"><td>${e.timestamp}</td><td>${e.actor}</td><td>${e.origin}</td><td><strong>${e.action}</strong></td><td>${e.entity}</td><td>${e.identifier}</td><td>${e.before}</td><td>${badge(e.after)}</td><td>${e.correlation}</td></tr>`).join('');
-  return `<section class="page-stack">${pageHeader('Auditoria',button('Exportar eventos','export-audit',{icon:'download'}))}<section class="filter-panel"><div class="search-wrap">${icon('search')}<input class="search-control" id="audit-search" value="${state.auditSearch}" placeholder="Buscar ID, usuário, entidade ou descrição..."></div><div class="filters">${field('Período','audit-period',['Hoje','Últimos 7 dias'])+field('Ator','audit-actor',['Todos','m.franca','hanaro-backend'])+field('Tipo','audit-type',['Todos','Humano','Automático'])+field('Entidade','audit-entity',['Todas','Transaction','Execution','Alert','Report'],state.auditEntity)+field('Severidade','audit-severity',['Todas','Informativo','Crítico'])}</div></section><section class="kpi-grid">${kpiCard('Eventos hoje',formatNumber(284))}${kpiCard('Ações humanas','73')}${kpiCard('Eventos automáticos','211')}${kpiCard('Eventos críticos','3','','danger')}</section>${tablePanel('',[{label:'Timestamp'},{label:'Ator'},{label:'Origem'},{label:'Ação'},{label:'Entidade'},{label:'Identificador'},{label:'Estado anterior'},{label:'Estado posterior'},{label:'Correlation ID'}],rows)}</section>`;
+  return `<section class="page-stack">${pageHeader('Auditoria',button('Exportar eventos','export-audit',{icon:'download'}))}<section class="filter-panel"><div class="search-wrap">${icon('search')}<input class="search-control" id="audit-search" value="${state.auditSearch}" placeholder="Buscar ID, usuário, entidade ou descrição..."></div><div class="filters">${field('Período','audit-period',['Hoje','Últimos 7 dias'])+field('Ator','audit-actor',['Todos','analista.qualidade','hanaro-backend'])+field('Tipo','audit-type',['Todos','Humano','Automático'])+field('Entidade','audit-entity',['Todas','Transaction','Execution','Alert','Report'],state.auditEntity)+field('Severidade','audit-severity',['Todas','Informativo','Crítico'])}</div></section><section class="kpi-grid">${kpiCard('Eventos hoje',formatNumber(284))}${kpiCard('Ações humanas','73')}${kpiCard('Eventos automáticos','211')}${kpiCard('Eventos críticos','3','','danger')}</section>${tablePanel('',[{label:'Timestamp'},{label:'Ator'},{label:'Origem'},{label:'Ação'},{label:'Entidade'},{label:'Identificador'},{label:'Estado anterior'},{label:'Estado posterior'},{label:'Correlation ID'}],rows)}</section>`;
 }
 
 function renderSettings() {
-  const tabLabels=[['negocio','Negócio'],['dados','Dados'],['relatorios','Relatórios'],['notificacoes','Notificações'],['acesso','Acesso'],['integracoes','Integrações'],['interface','Interface']];
+  const tabLabels=[['negocio','Negócio'],['dados','Dados'],['notificacoes','Notificações'],['acesso','Acesso'],['integracoes','Integrações'],['interface','Interface']];
   const tabs=`<div class="tabs">${tabLabels.map(([id,l])=>`<button class="tab ${state.settingsTab===id?'active':''}" data-action="settings-tab" data-id="${id}">${l}</button>`).join('')}</div>`;
   let content='';
-  if(state.settingsTab==='negocio') content=`<article class="settings-card"><h2>Metas de Material Scrap</h2><p>Parâmetros usados nos comparativos de IF Cost.</p><div class="form-grid"><div class="field"><label>Baseline</label><input class="control" value="${model.settings.baseline}"></div><div class="field"><label>Meta de redução</label><input class="control" id="setting-target" value="${model.settings.target}%"></div><div class="field"><label>Ano</label><input class="control" value="${model.settings.year}"></div><div class="field"><span class="field-label">Escopo</span><div class="choice-group">${families.map(f=>`<button class="choice selected" data-action="toggle-choice">${f}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>Componentes prioritários</strong><p>1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal</p></div>${badge('Ativo')}</div></article>`;
+  if(state.settingsTab==='negocio') content=`<article class="settings-card"><h2>Metas de Material Scrap</h2><p>Parâmetros usados nos comparativos de IF Cost.</p><div class="form-grid"><div class="field"><label>Baseline</label><input class="control" value="${model.settings.baseline}"></div><div class="field"><label>Meta de redução</label><input class="control" id="setting-target" value="${model.settings.target}%"></div><div class="field"><label>Ano</label><input class="control" value="${model.settings.year}"></div></div><div class="setting-row"><div><strong>Componentes prioritários</strong><p>1. Tela LCD · 2. Placa principal PCB · 3. Moldura frontal</p></div>${badge('Ativo')}</div></article>`;
   if(state.settingsTab==='dados') content=`<article class="settings-card"><h2>Regras de dados</h2><p>Parâmetros fictícios sujeitos à homologação.</p><div class="setting-row"><div><strong>Alias Codes</strong><p>${aliases.join(' · ')}</p></div>${badge('Sujeito à homologação','warning')}</div><div class="setting-row"><div><strong>Contingência pós-falha</strong><p>Liberada apenas por uma execução cujo reprocessamento também falhou.</p></div><button class="switch ${model.settings.upload?'on':''}" data-action="toggle-setting" data-key="upload" aria-label="Alternar contingência pós-falha"></button></div><div class="setting-row"><div><strong>Validação obrigatória</strong><p>Valida o arquivo antes da recuperação.</p></div><button class="switch ${model.settings.validation?'on':''}" data-action="toggle-setting" data-key="validation"></button></div></article>`;
-  if(state.settingsTab==='relatorios') content=`<article class="settings-card"><h2>Padrões de relatório</h2><p>Preferências aplicadas a novos relatórios.</p><div class="form-grid">${field('Frequência padrão','setting-frequency',['Semanal','Diário','Mensal'],model.settings.reportFrequency)+field('Visão','setting-view',['Acumulado','Mensal','Semanal'])+field('Comparação <span class="metric-tag" title="Previous Year">PY</span>','setting-compare',['PY — Previous Year','Sem comparação'])+field('Formato','setting-format',['PDF','XLSX'])}</div></article>`;
   if(state.settingsTab==='notificacoes') content=tablePanel('',[{label:'Nome'},{label:'Grupo'},{label:'E-mail'},{label:'Tipo'},{label:'Status'}],[['Alertas críticos','Qualidade','qualidade@exemplo.local','Imediato','Ativo'],['Resumo semanal','Gestores','gestores@exemplo.local','Semanal','Ativo'],['Falhas de ingestão','Dados','dados@exemplo.local','Imediato','Pausado']].map(r=>`<tr>${r.map((v,i)=>`<td>${i===4?badge(v):v}</td>`).join('')}</tr>`).join(''));
-  if(state.settingsTab==='acesso') content=tablePanel('',[{label:'Usuário'},{label:'Perfil'},{label:'Escopo'},{label:'Status'}],[['Marina França','Analista','HE / Qualidade','Ativo'],['Rafael Souza','Gestor','Todas as divisões','Ativo'],['Operação SMT','Operação','SMT','Ativo'],['Consulta TV','Consulta','TV','Inativo']].map(r=>`<tr>${r.map((v,i)=>`<td>${i===3?badge(v):v}</td>`).join('')}</tr>`).join(''));
+  if(state.settingsTab==='acesso') content=tablePanel('',[{label:'Usuário'},{label:'Perfil'},{label:'Escopo'},{label:'Status'}],[['Usuário de demonstração','Analista','Revisão de scrap','Ativo'],['Gestor','Gestor','Indicadores e relatórios','Ativo'],['Consulta / Kiosk','Consulta / Kiosk','Visualização','Ativo'],['Administrador','Administrador','Configuração do protótipo','Inativo']].map(r=>`<tr>${r.map((v,i)=>`<td>${i===3?badge(v):v}</td>`).join('')}</tr>`).join(''));
   if(state.settingsTab==='integracoes') content=`<div class="settings-layout">${[['GERP','Configurado','12/08 05:00'],['Cotação','Operacional','12/08 00:05'],['Banco','Operacional','12/08 09:40'],['Relatórios','Operacional','12/08 08:54']].map(([n,s,d])=>`<article class="settings-card"><div class="setting-row" style="border:0;padding:0"><div><h2>${n}</h2><p>Última atualização: ${d}</p></div>${badge(s)}</div></article>`).join('')}</div>`;
   if(state.settingsTab==='interface') content=`<div class="interface-settings-grid"><article class="settings-card"><h2>Tema</h2><p>Escolha a aparência da interface.</p><div class="theme-options">${[['light','Claro'],['dark','Escuro'],['system','Sistema']].map(([id,l])=>`<button class="theme-card ${document.documentElement.dataset.themePreference===id?'selected':''}" data-action="set-theme" data-id="${id}" data-theme-choice="${id}"><span class="theme-swatch"><i></i><i></i></span><strong>${l}</strong></button>`).join('')}</div></article><article class="settings-card"><h2>Idioma</h2><p>Idioma exibido na interface do sistema.</p><label class="language-select settings-language-select"><span class="language-select-icon" aria-hidden="true">${icon('language')}</span><select id="settings-language" aria-label="Alterar idioma"><option value="pt-BR" ${state.locale==='pt-BR'?'selected':''}>Português</option><option value="en" ${state.locale==='en'?'selected':''}>English</option><option value="ko" ${state.locale==='ko'?'selected':''}>한국어</option></select></label></article></div>`;
   return `<section class="page-stack">${pageHeader('Configurações',button('Salvar alterações','save-settings',{primary:true,icon:'check'}))}${tabs}${content}</section>`;
@@ -856,9 +968,7 @@ function hydrateReviewProductionContext() {
   const row = model.transactions.find((item) => item.id === state.activeReviewId);
   const facts = $('.review-facts');
   if (!row || !facts) return;
-  const moduleLabel = $$('.meta-item small', facts).find((label) => label.textContent === 'Módulo');
-  if (moduleLabel) moduleLabel.textContent = 'Componente';
-  facts.insertAdjacentHTML('beforeend', `<article class="production-context"><div><span class="block-kicker">Ocorrência de produção</span><h3>${row.defect}</h3><p>${row.occurrence}</p></div><dl><div><dt>Componente afetado</dt><dd>${row.module}</dd></div><div><dt>Posto</dt><dd>${row.station}</dd></div></dl></article>`);
+  facts.insertAdjacentHTML('beforeend', `<article class="production-context"><div><span class="block-kicker">Ocorrência de produção</span><h3>${row.defect}</h3><p>${row.occurrence}</p></div><dl><div><dt>Componente afetado</dt><dd>${row.component}</dd></div><div><dt>Posto</dt><dd>${row.station}</dd></div></dl></article>`);
 }
 
 function removeRedundantHelperCopy() {
@@ -886,13 +996,6 @@ function hydrateDashboardView() {
   const preset = dashboardChartPresets[state.dashboardFilters.view] || dashboardChartPresets.Acumulado;
   const chartTitle = $('.content-grid .panel h2', $('#page-content'));
   if (chartTitle) chartTitle.textContent = preset.title;
-  const previousYearLabel = $$('.kpi-label', $('#page-content')).find((label) => label.textContent.trim() === 'Mesmo período 2025');
-  if (previousYearLabel) previousYearLabel.innerHTML = 'Mesmo período <span class="metric-tag" title="Previous Year">PY</span>';
-  if (pendingCharts[0]) {
-    pendingCharts[0].valuesA = preset.current.map((value) => value * state.dashboardFactor);
-    pendingCharts[0].valuesB = preset.previous;
-    pendingCharts[0].target = preset.target;
-  }
 }
 
 const renderers={dashboard:renderDashboard,scrap:renderScrap,alertas:renderAlerts,relatorios:renderReports,execucoes:renderExecutions,auditoria:renderAudit,configuracoes:renderSettings};
@@ -912,23 +1015,23 @@ function openTransaction(id) {
   if (!t) return;
   const scrapDetails = `<div class="inline-actions">${badge(t.review.status)}</div>
     <section class="detail-section"><h3>Defeito de produção</h3><dl class="detail-list">
-      <div><dt>Componente afetado</dt><dd>${t.module}</dd></div><div><dt>Defeito observado</dt><dd>${t.defect}</dd></div>
+      <div><dt>Componente afetado</dt><dd>${t.component}</dd></div><div><dt>Defeito observado</dt><dd>${t.defect}</dd></div>
       <div><dt>Posto</dt><dd>${t.station}</dd></div><div><dt>Ocorrência registrada</dt><dd>${t.occurrence}</dd></div>
     </dl></section>
     <section class="detail-section"><h3>Dados do scrap</h3><dl class="detail-list">
-      <div><dt>Produto</dt><dd>${t.product}</dd></div><div><dt>Part Number</dt><dd>${t.partNumber}</dd></div>
-      <div><dt>Departamento / Linha</dt><dd>${t.department} · ${t.line}</dd></div><div><dt>QTY</dt><dd>${t.qty} un.</dd></div>
+      <div><dt>Part Number</dt><dd>${t.partNumber}</dd></div><div><dt>Descrição do item</dt><dd>${t.itemDescription}</dd></div>
+      <div><dt>Organização</dt><dd>${t.organizationCode}</dd></div><div><dt>Linha do scrap</dt><dd>${t.scrapLine}</dd></div><div><dt>Tipo de movimentação</dt><dd>${t.accountAlias}</dd></div><div><dt>QTY</dt><dd>${t.qty} un.</dd></div>
       <div><dt>IF Cost</dt><dd>${formatCurrency(t.ifCost)}</dd></div>
     </dl></section>
     ${t.review.status === 'Justificado' ? `<section class="detail-section"><h3>Justificativa registrada</h3><dl class="detail-list"><div><dt>Categoria</dt><dd>${t.review.category}</dd></div><div><dt>Justificativa</dt><dd>${t.review.reason}</dd></div><div><dt>Revisor</dt><dd>${t.review.responsible}</dd></div><div><dt>Relatório</dt><dd>${t.review.includeInReport ? 'Elegível para inclusão' : 'Não incluído'}</dd></div></dl></section>` : ''}
     <section class="detail-section"><h3>Rastreabilidade automática</h3><dl class="detail-list"><div><dt>Origem</dt><dd>${t.source}</dd></div><div><dt>Batch</dt><dd>${t.batch}</dd></div><div><dt>Execution ID</dt><dd>${t.executionId}</dd></div><div><dt>Processado em</dt><dd>${t.processedAt}</dd></div></dl></section>`;
   openOverlay(drawer(t.id, scrapDetails, `${button('Ver execução','open-related-execution',{id:t.executionId})}${button('Explorar Part Number','transaction-explore',{id:t.id})}${button(t.review.status==='Justificado'?'Ver revisão':'Revisar registro','review-one',{id:t.id,primary:true})}`));
 }
-function openAlert(id){const a=model.alerts.find(x=>x.id===id);if(!a)return;const before=a.status;if(a.status==='Novo'){a.status='Lido';addAudit('Visualizou alerta','Alert',a.id,before,'Lido');}openOverlay(drawer(a.type,`<div class="inline-actions">${badge(a.severity)}${badge(a.status)}</div><section class="detail-section"><h3>Evento notificado</h3><p>${a.description}</p><dl class="detail-list"><div><dt>Alerta</dt><dd>${a.id}</dd></div><div><dt>Impacto estimado</dt><dd>${formatCurrency(a.impact)}</dd></div><div><dt>Área</dt><dd>${a.department} · ${a.line}</dd></div><div><dt>Canal</dt><dd>${a.channel}</dd></div></dl></section><section class="detail-section"><h3>Registros relacionados</h3><p>${a.transactionIds.length?`${a.transactionIds.length} registros de scrap originaram esta notificação.`:'Nenhum registro diretamente vinculado.'}</p><p class="panel-description">A justificativa e a revisão são feitas na Base de Scrap.</p></section><section class="detail-section"><h3>Histórico da notificação</h3><ol class="timeline"><li>Condição detectada<small>${a.dateTime}</small></li><li>Notificação enviada<small>${a.channel}</small></li><li>Status: ${a.status}<small>Estado atual</small></li></ol></section>`,`${button('Arquivar alerta','archive-alert',{id:a.id})}${button('Ver registros de scrap','alert-transactions',{id:a.id,primary:true})}`));}
+function openAlert(id){const a=model.alerts.find(x=>x.id===id);if(!a)return;const before=a.status;if(a.status==='Novo'){a.status='Lido';addAudit('Visualizou alerta','Alert',a.id,before,'Lido');}openOverlay(drawer(a.type,`<div class="inline-actions">${badge(a.severity)}${badge(a.status)}</div><section class="detail-section"><h3>Evento notificado</h3><p>${a.description}</p><dl class="detail-list"><div><dt>Alerta</dt><dd>${a.id}</dd></div><div><dt>Impacto estimado</dt><dd>${formatCurrency(a.impact)}</dd></div><div><dt>Part Number</dt><dd>${a.partNumber}</dd></div><div><dt>Componente</dt><dd>${a.component}</dd></div><div><dt>Canal</dt><dd>${a.channel}</dd></div></dl></section><section class="detail-section"><h3>Registros relacionados</h3><p>${a.transactionIds.length?`${a.transactionIds.length} registros de scrap originaram esta notificação.`:'Nenhum registro diretamente vinculado.'}</p><p class="panel-description">A justificativa e a revisão são feitas na Base de Scrap.</p></section><section class="detail-section"><h3>Histórico da notificação</h3><ol class="timeline"><li>Condição detectada<small>${a.dateTime}</small></li><li>Notificação enviada<small>${a.channel}</small></li><li>Status: ${a.status}<small>Estado atual</small></li></ol></section>`,`${button('Arquivar alerta','archive-alert',{id:a.id})}${button('Ver registros de scrap','alert-transactions',{id:a.id,primary:true})}`));}
 function openExecution(id){const e=model.executions.find(x=>x.id===id);if(!e)return;const steps=['Request automático iniciado','Arquivo localizado no GERP','Arquivo recebido','Validação estrutural','Normalização','Conversão','Persistência','Processamento concluído'];const failed=e.status==='Falha'||e.status==='Parcial';const footer=`${button('Ver registros processados','execution-records',{id:e.id})}${failed?button('Reprocessar','reprocess',{id:e.id,primary:true,icon:'refresh'}):''}${e.contingencyAvailable?button('Usar contingência','open-contingency',{id:e.id,icon:'upload'}):''}`;openOverlay(drawer(e.id,`<div class="inline-actions">${badge(e.status)}<span class="badge">${e.source}</span>${e.scheduled?badge('Agendada','info'):''}</div><section class="detail-section"><h3>Timeline automática</h3><ol class="timeline">${steps.map((s,i)=>`<li class="${failed&&i===5?'failed':''}">${s}<small>${i===5&&failed?'Taxa de câmbio não localizada':`Etapa ${i+1} registrada`}</small></li>`).join('')}</ol></section><section class="detail-section"><h3>Exceções</h3>${tablePanel('',[{label:'Tipo'},{label:'Registro'},{label:'Motivo'},{label:'Etapa'},{label:'Status'}],`<tr><td>Câmbio indisponível</td><td>TX-82194</td><td>Taxa não localizada</td><td>Conversão</td><td>${badge(e.status==='Concluído'?'Resolvido':'Pendente')}</td></tr><tr><td>Duplicidade</td><td>TX-82171</td><td>Registro já processado</td><td>Persistência</td><td>${badge('Ignorado')}</td></tr>`)}</section>${e.contingencyAvailable?`<section class="contingency-notice"><strong>Contingência liberada</strong><p>O reprocessamento falhou. Um arquivo operacional pode ser usado exclusivamente para recuperar esta execução.</p></section>`:''}`,footer));}
 function openAudit(id){const e=model.audit.find(x=>x.id===id);if(!e)return;openOverlay(drawer(e.action,`<section class="detail-section"><dl class="detail-list">${Object.entries(e).map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></section><section class="detail-section"><h3>Integridade</h3><p class="panel-description">Eventos de auditoria são imutáveis e não podem ser excluídos pelo protótipo.</p></section>`));}
 
-function addAudit(action,entity,identifier,before,after){model.audit.unshift({id:`AUD-${Date.now()}`,timestamp:new Date().toLocaleString('pt-BR'),actor:'m.franca',origin:'Web',action,entity,identifier,before,after,correlation:`COR-${Math.floor(900000+Math.random()*99999)}`,severity:'Informativo'});}
+function addAudit(action,entity,identifier,before,after){model.audit.unshift({id:`AUD-${Date.now()}`,timestamp:new Date().toLocaleString('pt-BR'),actor:'analista.qualidade',origin:'Web',action,entity,identifier,before,after,correlation:`COR-${Math.floor(900000+Math.random()*99999)}`,severity:'Informativo'});}
 function applyTheme(preference){localStorage.setItem('hanaro-theme',preference);document.documentElement.dataset.themePreference=preference;const dark=preference==='dark'||(preference==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';renderPage();}
 function closeMobileSidebar(){$('#app-shell').classList.remove('sidebar-open');}
 
@@ -939,15 +1042,18 @@ const tvPanels = [
   { title: '2026 × 2025', eyebrow: 'Comparativo e tendência' },
 ];
 function tvKpi(label, value, detail = '', tone = '') {
-  const displayLabel = label === 'Redução vs 2025' ? 'Redução <span class="metric-tag" title="Previous Year">PY</span>' : label;
-  return `<article class="tv-kpi ${tone}"><span>${displayLabel}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`;
+  return `<article class="tv-kpi ${tone}"><span>${label}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`;
 }
 function tvHeader(panel) { return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>12 Ago 2026 · Atualizado às 14:32</strong><span>${icon('check')} Dados atualizados</span></div></header>`; }
 function tvPanelContent(index) {
   const panel = tvPanels[index];
-  if (index === 0) return `${tvHeader(panel)}<div class="tv-kpi-grid">${tvKpi('IF Cost acumulado','US$ 184.260','Ago/2026')}${tvKpi('Redução vs 2025','-13,2%','US$ 28.040 abaixo','success')}${tvKpi('Meta 2026','-15,0%','Redução anual')}${tvKpi('Gap para meta','1,8 p.p.','US$ 3.805 acima','danger')}</div><div class="tv-main-grid"><article class="tv-card tv-chart-card"><h2>Evolução do IF Cost — 2026 × 2025 × Meta</h2>${lineChart([8,9,11,14,18,23,25,22,24,27,26,29],[12,13,17,20,19,18,25,28,31,29,33,35],24,330)}</article><article class="tv-card"><h2>Top 3 componentes afetados</h2>${barList([{label:'Tela LCD',value:72400,display:'US$ 72,4k'},{label:'Placa principal PCB',value:70060,display:'US$ 70,1k'},{label:'Moldura frontal',value:41800,display:'US$ 41,8k'}])}</article></div><div class="tv-summary-strip"><strong>1.247</strong> unidades de scrap <i></i><strong>96</strong> transações <i></i><strong class="negative">6</strong> alertas críticos</div>`;
-  if (index === 1) return `${tvHeader(panel)}<div class="tv-offender-grid"><article class="tv-card"><h2>Pareto de defeitos por IF Cost</h2>${barList([{label:'Risco profundo no painel',value:38400},{label:'Falha no teste funcional',value:27600},{label:'Painel trincado por impacto',value:19100},{label:'Trinca no ponto de fixação',value:14800},{label:'Conector danificado',value:10700}])}</article><article class="tv-card"><h2>IF Cost por departamento</h2>${barList([{label:'Final Assembly A',value:62100},{label:'Final Assembly B',value:48500},{label:'SMT',value:32700},{label:'IPI',value:19400}])}</article></div><div class="tv-highlight-grid"><article class="tv-highlight"><span>Linha mais crítica</span><strong>Line 04</strong><b>US$ 31.840</b><small class="negative">+22% vs média recente</small></article><article class="tv-highlight"><span>Defeito mais crítico</span><strong>Risco no painel</strong><b>39,3%</b><small>do IF Cost acumulado</small></article></div>`;
-  if (index === 2) { const priorities = model.alerts.filter(a => a.severity === 'Crítico' || a.severity === 'Alto').slice(0,3); const justified=model.transactions.filter(row=>row.review.status==='Justificado').length; return `${tvHeader(panel)}<div class="tv-priority-layout"><div class="tv-priority-list">${priorities.map((a,i)=>`<article class="tv-priority ${i===0?'critical':''}"><div><span>${badge(a.severity)}</span><strong>${a.line}</strong></div><h2>${a.module}</h2><b>${formatCurrency(a.impact)}</b><p>${a.description}</p></article>`).join('')}</div><aside class="tv-card tv-analysis-status"><h2>Situação das revisões</h2><div class="tv-analysis-counts"><div><strong>${model.transactions.length-justified}</strong><span>Pendentes</span></div><div><strong>${model.transactions.filter(row=>row.review.status==='Em revisão').length}</strong><span>Em revisão</span></div><div><strong>${justified}</strong><span>Justificadas</span></div></div><h2>Categorias predominantes</h2>${barList([{label:'Material',value:42,display:'42%'},{label:'Processo',value:27,display:'27%'},{label:'Máquina',value:19,display:'19%'},{label:'Outros',value:12,display:'12%'}])}</aside></div>`; }
+  if (index === 0) {
+    const evolution = buildDashboardEvolution(model.transactions, 'Acumulado');
+    const offenders = aggregateTransactions(model.transactions, 'component').slice(0, 3);
+    return `${tvHeader(panel)}<div class="tv-kpi-grid">${tvKpi('IF Cost acumulado','US$ 184.260','Ago/2026')}${tvKpi('Redução vs 2025','-13,2%','US$ 28.040 abaixo','success')}${tvKpi('Meta 2026','-15,0%','Meta do período')}${tvKpi('Gap para meta','1,8 p.p.','US$ 3.805 acima da meta','danger')}</div><div class="tv-main-grid"><article class="tv-card tv-chart-card"><h2>Evolução do IF Cost — 2026 × 2025 × Meta fixa</h2>${lineChart(evolution.current,evolution.previous,evolution.target,330)}</article><article class="tv-card"><h2>Top 3 componentes afetados</h2>${barList(offenders)}</article></div><div class="tv-summary-strip"><strong>1.247</strong> unidades de scrap <i></i><strong>96</strong> transações <i></i><strong class="negative">6</strong> alertas críticos</div>`;
+  }
+  if (index === 1) { const linesRank=aggregateTransactions(model.transactions,'scrapLine'); const partsRank=aggregateTransactions(model.transactions,'partNumber'); return `${tvHeader(panel)}<div class="tv-offender-grid"><article class="tv-card"><h2>Pareto de defeitos por IF Cost</h2>${barList([{label:'Risco profundo no painel',value:38400},{label:'Falha no teste funcional',value:27600},{label:'Painel trincado por impacto',value:19100},{label:'Trinca no ponto de fixação',value:14800},{label:'Conector danificado',value:10700}])}</article><article class="tv-card"><h2>IF Cost por linha de scrap</h2>${barList(linesRank)}</article></div><div class="tv-highlight-grid"><article class="tv-highlight"><span>Part Number mais crítico</span><strong>${partsRank[0]?.label||'—'}</strong><b>${formatCurrency(partsRank[0]?.value||0)}</b><small class="negative">Maior impacto acumulado</small></article><article class="tv-highlight"><span>Defeito mais crítico</span><strong>Risco no painel</strong><b>39,3%</b><small>do IF Cost acumulado</small></article></div>`; }
+  if (index === 2) { const priorities = model.alerts.filter(a => a.severity === 'Crítico' || a.severity === 'Alto').slice(0,3); const justified=model.transactions.filter(row=>row.review.status==='Justificado').length; return `${tvHeader(panel)}<div class="tv-priority-layout"><div class="tv-priority-list">${priorities.map((a,i)=>`<article class="tv-priority ${i===0?'critical':''}"><div><span>${badge(a.severity)}</span><strong>${a.partNumber}</strong></div><h2>${a.component}</h2><b>${formatCurrency(a.impact)}</b><p>${a.description}</p></article>`).join('')}</div><aside class="tv-card tv-analysis-status"><h2>Situação das revisões</h2><div class="tv-analysis-counts"><div><strong>${model.transactions.length-justified}</strong><span>Pendentes</span></div><div><strong>${model.transactions.filter(row=>row.review.status==='Em revisão').length}</strong><span>Em revisão</span></div><div><strong>${justified}</strong><span>Justificadas</span></div></div><h2>Categorias predominantes</h2>${barList([{label:'Material',value:42,display:'42%'},{label:'Processo',value:27,display:'27%'},{label:'Máquina',value:19,display:'19%'},{label:'Outros',value:12,display:'12%'}])}</aside></div>`; }
   return `${tvHeader(panel)}<div class="tv-trend-layout"><article class="tv-card tv-chart-card"><h2>Evolução acumulada no ano</h2>${lineChart([172,176,169,183,177,171,168,184],[188,201,194,211,205,198,216,212],181,430)}</article><aside class="tv-results"><h2>Resultado acumulado</h2>${tvKpi('2025','US$ 1,625M')}${tvKpi('2026','US$ 1,400M')}${tvKpi('Redução','-13,8%','','success')}${tvKpi('Restante para meta','1,2 p.p.','','danger')}</aside></div>`;
 }
 function renderTvMode(resetProgress = true) {
@@ -982,18 +1088,19 @@ async function handleAction(action,el){
   if(action==='notifications')return showToast('Você tem novos alertas. Abra a notificação para ver os registros relacionados.');
   if(action==='go-reports'||action==='new-report'){state.reportTab='gerar';return navigateTo('relatorios');}
   if(action.startsWith('export')||action==='generate-pdf'||action==='generate-excel'){el.classList.add('spinning');el.disabled=true;await delay(650);el.classList.remove('spinning');el.disabled=false;return showToast('Arquivo fictício preparado para demonstração.');}
-  if(action==='refresh-dashboard'){el.classList.add('spinning');el.disabled=true;$('#sync-state').textContent='Atualizando...';await delay(600);state.dashboardFactor=1+.03*Math.random();el.disabled=false;el.classList.remove('spinning');$('#sync-state').textContent=`Atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;renderPage();return showToast('Dados atualizados.');}
-  if(action==='clear-dashboard'){state.dashboardFactor=1;state.dashboardFilters={period:'01/08/2026 — 12/08/2026',view:'Acumulado',division:'Todas',department:'Todos',line:'Todas',family:'Todas',module:'Todos'};renderPage();return showToast('Filtros limpos.');}
-  if(action==='dashboard-explore'){setExplorationContext({module:id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
-  if(action==='dashboard-row-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;setExplorationContext({module:row.module,partNumber:row.partNumber,line:row.line,transactionId:row.id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
-  if(action==='dashboard-row-review'){const row=model.transactions.find(t=>t.id===id);if(!row)return;state.selectedScrapIds=[row.id];state.activeReviewId=row.id;state.scrapView='review';setExplorationContext({module:row.module,partNumber:row.partNumber,line:row.line,transactionId:row.id},'Dashboard');navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(row.id)}`);return;}
+  if(action==='refresh-dashboard'){el.classList.add('spinning');el.disabled=true;$('#sync-state').textContent='Atualizando...';await delay(600);el.disabled=false;el.classList.remove('spinning');$('#sync-state').textContent=`Atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;renderPage();return showToast('Dados atualizados.');}
+  if(action==='clear-dashboard'){state.dashboardFactor=1;state.dashboardFilters={period:'01/08/2026 — 12/08/2026',view:'Acumulado',item:'Todos',partNumber:'Todos',scrapLine:'Todas'};renderPage();return showToast('Filtros limpos.');}
+  if(action==='dashboard-explore'){setExplorationContext({component:id,partNumber:state.dashboardFilters.partNumber==='Todos'?null:state.dashboardFilters.partNumber,scrapLine:state.dashboardFilters.scrapLine==='Todas'?null:state.dashboardFilters.scrapLine,transactionId:null,alertId:null,executionId:null},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
+  if(action==='dashboard-row-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;setExplorationContext({component:row.component,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
+  if(action==='dashboard-row-review'){const row=model.transactions.find(t=>t.id===id);if(!row)return;state.selectedScrapIds=[row.id];state.activeReviewId=row.id;state.scrapView='review';setExplorationContext({component:row.component,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(row.id)}`);return;}
   if(action==='page-prev'){state.scrapPage--;return renderPage();} if(action==='page-next'){state.scrapPage++;return renderPage();}
   if(action==='sort-scrap'){const key=el.dataset.key;state.scrapSort.direction=state.scrapSort.key===key&&state.scrapSort.direction==='asc'?'desc':'asc';state.scrapSort.key=key;state.scrapPage=1;return renderPage();}
-  if(action==='more-filters')return openOverlay(modal('Mais filtros',`<div class="form-grid">${field('Família','modal-family',['Todas',...families])+field('Produto','modal-product',['Todos',...products])+field('Part Number','modal-part',['Todos',...partNumbers])+field('Account Alias','modal-alias',['Todos',...aliases])+field('Módulo','modal-module',['Todos',...modules])+field('Fornecedor','modal-supplier',['Todos','Fornecedor A','Fornecedor B'])}</div>`,`${button('Cancelar','close-overlay')}${button('Aplicar filtros','apply-more-filters',{primary:true})}`));
-  if(action==='apply-more-filters'){closeOverlay();state.scrapPage=1;state.scrapSearch='EAJ';renderPage();return showToast('Filtros avançados aplicados.');}
+  if(action==='more-filters'){const f=state.scrapAdvancedFilters;return openOverlay(modal('Mais filtros',`<div class="form-grid">${field('Organização','modal-organization',['Todas',...organizationCodes],f.organizationCode)+field('Grupo de subinventário','modal-subinventory-group',['Todos',...subinventoryGroups],f.subinventoryGroup)+field('Subinventário','modal-subinventory',['Todos',...subinventories],f.subinventory)+field('Mercado do armazém','modal-warehouse-market',['Todos',...warehouseMarkets],f.warehouseMarket)+field('Departamento de recebimento','modal-receipt-department',['Todos',...receiptDepartments],f.receiptDepartment)+field('Part Number','modal-part-number',['Todos',...partNumbers],f.partNumber)}</div>`,`${button('Cancelar','close-overlay')}${button('Limpar filtros','clear-more-filters')}${button('Aplicar filtros','apply-more-filters',{primary:true})}`));}
+  if(action==='apply-more-filters'){state.scrapAdvancedFilters={organizationCode:$('#modal-organization')?.value||'Todas',subinventoryGroup:$('#modal-subinventory-group')?.value||'Todos',subinventory:$('#modal-subinventory')?.value||'Todos',warehouseMarket:$('#modal-warehouse-market')?.value||'Todos',receiptDepartment:$('#modal-receipt-department')?.value||'Todos',partNumber:$('#modal-part-number')?.value||'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros avançados aplicados.');}
+  if(action==='clear-more-filters'){state.scrapAdvancedFilters={organizationCode:'Todas',subinventoryGroup:'Todos',subinventory:'Todos',warehouseMarket:'Todos',receiptDepartment:'Todos',partNumber:'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros limpos.');}
   if(action==='drill-part'){setExplorationContext({partNumber:id},state.context.source||'Explorador');renderPage();return showToast(`Exploração aprofundada em ${id}.`);}
   if(action==='clear-context'){state.context[el.dataset.key]=null;state.scrapPage=1;renderPage();return;}
-  if(action==='clear-all-context'){state.context={source:null,module:null,partNumber:null,line:null,transactionId:null,alertId:null,executionId:null};state.scrapPage=1;renderPage();return;}
+  if(action==='clear-all-context'){state.context={source:null,component:null,partNumber:null,scrapLine:null,transactionId:null,alertId:null,executionId:null};state.scrapPage=1;renderPage();return;}
   if(action==='toggle-scrap'){state.selectedScrapIds=state.selectedScrapIds.includes(id)?state.selectedScrapIds.filter(value=>value!==id):[...state.selectedScrapIds,id];return renderPage();}
   if(action==='select-visible-scrap'){const ids=filteredTransactions().slice((state.scrapPage-1)*state.scrapPageSize,state.scrapPage*state.scrapPageSize).map(row=>row.id);const allSelected=ids.every(value=>state.selectedScrapIds.includes(value));state.selectedScrapIds=allSelected?state.selectedScrapIds.filter(value=>!ids.includes(value)):[...new Set([...state.selectedScrapIds,...ids])];return renderPage();}
   if(action==='clear-scrap-selection'){state.selectedScrapIds=[];return renderPage();}
@@ -1006,20 +1113,20 @@ async function handleAction(action,el){
   if(action==='conclude-scrap-review'){syncScrapReview();const source=model.transactions.find(item=>item.id===state.activeReviewId);if(!source.review.category||source.review.category==='Selecione...'||!source.review.reason.trim())return showToast('Informe a categoria e a justificativa antes de concluir.','error');const applyAll=$('#review-apply-all')?.checked??false;const targets=applyAll?model.transactions.filter(item=>state.selectedScrapIds.includes(item.id)):[source];targets.forEach(item=>{const before=item.review.status;if(item!==source)item.review={...source.review,classification4m:[...source.review.classification4m],evidence:[...source.review.evidence]};item.review.status='Justificado';addAudit('Concluiu revisão e justificativa de scrap','Transaction',item.id,before,'Justificado');});const remaining=state.selectedScrapIds.filter(value=>!targets.some(item=>item.id===value));state.selectedScrapIds=remaining;if(remaining.length){state.activeReviewId=remaining[0];history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(state.activeReviewId)}`);renderPage();}else{state.scrapView='list';history.replaceState(null,'','#scrap');renderPage();}return showToast(`${targets.length} registro${targets.length>1?'s':''} justificado${targets.length>1?'s':''} e ${targets.length>1?'disponíveis':'disponível'} para relatório.`);}
   if(action==='add-review-evidence'){syncScrapReview();return openOverlay(modal('Adicionar evidência à revisão',`<div class="choice-group">${['Foto','Documento','Comentário','Referência GERP'].map(value=>`<button class="choice" data-action="choose-review-evidence" data-value="${value}">${value}</button>`).join('')}</div><p class="panel-description">A inclusão é simulada; nenhum arquivo real será enviado.</p>`));}
   if(action==='choose-review-evidence'){const row=model.transactions.find(item=>item.id===state.activeReviewId);row.review.evidence.push(`${el.dataset.value} fictício · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`);closeOverlay();renderPage();return showToast('Evidência adicionada à revisão.');}
-  if(action==='transaction-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;closeOverlay();setExplorationContext({module:row.module,partNumber:row.partNumber,line:row.line,transactionId:null},'Transação');renderPage();return;}
+  if(action==='transaction-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;closeOverlay();setExplorationContext({component:row.component,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:null},'Transação');renderPage();return;}
   if(action==='validate-upload'){el.disabled=true;el.classList.add('spinning');await delay(700);return openUploadResult();}
   if(action==='confirm-upload'){model.executions.unshift({id:'EXE-20260812-0047',source:'Contingência operacional',process:'Recuperação de execução com falha',start:'12/08 10:02',end:'12/08 10:03',duration:'01m14s',received:827,valid:824,rejected:3,status:'Concluído',scheduled:false,retryCount:0,contingencyAvailable:false});addAudit('Executou contingência após falha de reprocessamento','Execution','EXE-20260812-0047','Arquivo validado','Concluído');closeOverlay();renderPage();return showToast('Contingência concluída e auditada.');}
   if(action==='read-alerts'){const targets=model.alerts.filter(a=>a.status==='Novo');targets.forEach(a=>{a.status='Lido';addAudit('Marcou alerta como lido','Alert',a.id,'Novo','Lido');});renderPage();return showToast(`${targets.length} alertas marcados como lidos.`);}
   if(action==='archive-alert'){const a=model.alerts.find(x=>x.id===id);if(a){const before=a.status;a.status='Arquivado';addAudit('Arquivou alerta','Alert',a.id,before,'Arquivado');}closeOverlay();renderPage();return showToast('Alerta arquivado.');}
-  if(action==='alert-transactions'){const a=model.alerts.find(x=>x.id===id);if(!a)return;const before=a.status;if(a.status==='Novo')a.status='Lido';setExplorationContext({module:a.module,line:a.line,alertId:a.id,transactionId:null},'Alerta');state.selectedScrapIds=[];state.scrapView='list';if(before==='Novo')addAudit('Abriu registros a partir do alerta','Alert',a.id,'Novo','Lido');closeOverlay();return navigateTo('scrap');}
+  if(action==='alert-transactions'){const a=model.alerts.find(x=>x.id===id);if(!a)return;const before=a.status;if(a.status==='Novo')a.status='Lido';setExplorationContext({component:a.component,partNumber:null,scrapLine:null,alertId:a.id,transactionId:null,executionId:null},'Alerta');state.selectedScrapIds=[];state.scrapView='list';if(before==='Novo')addAudit('Abriu registros a partir do alerta','Alert',a.id,'Novo','Lido');closeOverlay();return navigateTo('scrap');}
   if(action==='report-tab'){state.reportTab=id;return renderPage();}
   if(action==='toggle-report-review'){const row=model.transactions.find(item=>item.id===id);if(row){row.review.includeInReport=!row.review.includeInReport;renderPage();}return;}
   if(action==='open-report-review'){state.selectedScrapIds=[id];state.activeReviewId=id;state.scrapView='review';navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(id)}`);return;}
-  if(action==='register-report'){const version=`v1.${model.reports.length+1}`,reportId=`REP-2026-W33-v${model.reports.length+1}`,reviewIds=model.transactions.filter(row=>row.review.status==='Justificado'&&row.review.includeInReport).map(row=>row.id),reportCost=model.transactions.filter(row=>reviewIds.includes(row.id)).reduce((sum,row)=>sum+row.ifCost,0);model.reports.unshift({id:reportId,version,type:$('#report-type')?.value||'Semanal',period:'W33 · 10–16 Ago',generatedAt:'12/08 10:14',author:'M. França',ifCost:reportCost,format:'PDF',status:'Publicado',reviewIds});model.sends.unshift({report:reportId,recipient:'gestores@exemplo.local',channel:'E-mail',requestedAt:'12/08 10:15',status:'Pendente',attempts:0});addAudit('Gerou relatório com scraps justificados','Report',reportId,'Rascunho','Publicado');state.reportTab='versoes';renderPage();return showToast(`Relatório ${reportId} registrado com ${reviewIds.length} scrap(s) revisado(s).`);}
+  if(action==='register-report'){const version=`v1.${model.reports.length+1}`,reportId=`REP-2026-W33-v${model.reports.length+1}`,reviewIds=model.transactions.filter(row=>row.review.status==='Justificado'&&row.review.includeInReport).map(row=>row.id),reportCost=model.transactions.filter(row=>reviewIds.includes(row.id)).reduce((sum,row)=>sum+row.ifCost,0);model.reports.unshift({id:reportId,version,type:$('#report-type')?.value||'Semanal',period:'W33 · 10–16 Ago',generatedAt:'12/08 10:14',author:'Analista de Qualidade',ifCost:reportCost,format:'PDF',status:'Publicado',reviewIds});model.sends.unshift({report:reportId,recipient:'gestores@exemplo.local',channel:'E-mail',requestedAt:'12/08 10:15',status:'Pendente',attempts:0});addAudit('Gerou relatório com scraps justificados','Report',reportId,'Rascunho','Publicado');state.reportTab='versoes';renderPage();return showToast(`Relatório ${reportId} registrado com ${reviewIds.length} scrap(s) revisado(s).`);}
   if(action==='resend-report'){const s=model.sends[Number(id)];s.status='Processando';renderPage();await delay(700);s.status='Enviado';s.attempts++;addAudit('Reenviou relatório','Report',s.report,'Falha','Enviado');renderPage();return showToast('Relatório reenviado com sucesso.');}
   if(action==='send-report'){const s=model.sends[Number(id)];s.status='Processando';renderPage();await delay(700);s.status='Enviado';s.attempts++;addAudit('Enviou relatório','Report',s.report,'Pendente','Enviado');renderPage();return showToast('Envio simulado com sucesso.');}
   if(action==='open-related-execution'){closeOverlay();navigateTo('execucoes');setTimeout(()=>openExecution(id),80);return;}
-  if(action==='execution-records'){closeOverlay();setExplorationContext({executionId:id,module:null,partNumber:null,line:null,transactionId:null},'Execução');return navigateTo('scrap');}
+  if(action==='execution-records'){closeOverlay();setExplorationContext({executionId:id,component:null,partNumber:null,scrapLine:null,transactionId:null},'Execução');return navigateTo('scrap');}
   if(action==='open-contingency'){const e=model.executions.find(x=>x.id===id);if(!e?.contingencyAvailable)return showToast('A contingência ainda não está disponível.','error');return openUploadModal(id);}
   if(action==='reprocess'){const e=model.executions.find(x=>x.id===id),before=e.status;e.status='Processando';e.retryCount=(e.retryCount||0)+1;closeOverlay();renderPage();showToast('Reprocessamento iniciado.');await delay(900);if(before==='Falha'&&e.retryCount===1){e.status='Falha';e.contingencyAvailable=true;addAudit('Reprocessamento falhou; liberou contingência','Execution',e.id,before,'Falha');renderPage();setTimeout(()=>openExecution(e.id),80);return showToast('O reprocessamento falhou. A contingência foi liberada.','error');}e.status='Concluído';e.rejected=0;e.valid=e.received;e.contingencyAvailable=false;addAudit('Reprocessou execução','Execution',e.id,before,'Concluído');renderPage();return showToast('Execução reprocessada com sucesso.');}
   if(action==='settings-tab'){state.settingsTab=id;return renderPage();}
@@ -1047,19 +1154,17 @@ document.addEventListener('change', (event) => {
   }
   if (target.id === 'page-size') { state.scrapPageSize = Number(target.value); state.scrapPage = 1; renderPage(); }
   if (target.matches('[data-filter^="dash-"]')) {
-    const dashboardKeys = { 'dash-period': 'period', 'dash-view': 'view', 'dash-division': 'division', 'dash-department': 'department', 'dash-line': 'line', 'dash-family': 'family', 'dash-module': 'module' };
+    const dashboardKeys = { 'dash-period': 'period', 'dash-view': 'view', 'dash-item': 'item', 'dash-part-number': 'partNumber', 'dash-scrap-line': 'scrapLine' };
     const key = dashboardKeys[target.id];
     if (key) state.dashboardFilters[key] = target.value;
-    state.dashboardFactor = .91 + Math.random() * .12;
     renderPage();
     showToast(`${target.closest('.field')?.querySelector('label')?.textContent || 'Filtro'} atualizado para ${target.value}.`);
   }
   if (target.id === 'scrap-date') { state.scrapFilters.date = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'scrap-division') { state.scrapFilters.division = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'scrap-department') { state.scrapFilters.department = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'scrap-line') { state.scrapFilters.line = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-account-alias') { state.scrapFilters.accountAlias = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-processing-status') { state.scrapFilters.processingStatus = target.value; state.scrapPage = 1; renderPage(); }
   if (target.id === 'scrap-review-status') { state.scrapFilters.reviewStatus = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'alert-severity') { state.alertSeverity = target.value; renderPage(); }
+  if (target.matches('[data-filter^="alert-"]')) { const alertKeys={'alert-period':'period','alert-severity':'severity','alert-type':'type','alert-item':'item','alert-status':'status'}; if(alertKeys[target.id])state.alertFilters[alertKeys[target.id]]=target.value; renderPage(); }
   if (target.id === 'exec-status') { state.executionStatus = target.value; renderPage(); }
   if (target.id === 'audit-entity') { state.auditEntity = target.value; renderPage(); }
   if (target.id === 'report-type' || target.id === 'report-compare') { state.reportFactor = .9 + Math.random() * .2; renderPage(); showToast('Preview atualizado.'); }
