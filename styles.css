@@ -704,10 +704,12 @@ tr.selected-row td:first-child { box-shadow: inset 3px 0 0 var(--brand-primary);
 .dashboard-sync-strip strong { font-size: .76rem; }
 .dashboard-sync-strip small, .dashboard-sync-strip > span:last-child { color: var(--app-text-muted); font-size: .68rem; }
 .dashboard-sync-strip > span:last-child { white-space: nowrap; }
-.dashboard-filter-panel { border: 1px solid var(--app-border); border-radius: 1rem; background: var(--app-surface-muted); padding: 1rem; }
-.dashboard-filter-row { display: grid; grid-template-columns: .55fr 1fr 1fr .8fr 1.25fr auto; gap: .7rem; align-items: end; }
-.dashboard-more-filter { height: 2.55rem; }
+.dashboard-filter-panel { border: 1px solid var(--app-border); border-radius: 1rem; background: var(--app-surface-muted); padding: .85rem 1rem; }
+.dashboard-filter-row { display: grid; grid-template-columns: .8fr 1.15fr .95fr .85fr 1.1fr 1.1fr 1.2fr; gap: .65rem; align-items: end; }
+.dashboard-filter-row .control { padding: .5rem .55rem; font-size: .78rem; text-overflow: ellipsis; }
+.dashboard-filter-row .field label { font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dashboard-filter-panel footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .8rem; border-top: 1px solid var(--app-border); padding-top: .8rem; }
+.dashboard-filter-panel footer .link-button { margin-left: auto; }
 .active-filter-list { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: .45rem; }
 .active-filter-list > span { color: var(--app-text-muted); font-size: .68rem; font-weight: 700; }
 .filter-chip { display: inline-flex; align-items: center; gap: .35rem; border: 1px solid var(--brand-primary-border); border-radius: 999px; background: var(--brand-primary-softer); color: var(--brand-primary); cursor: pointer; padding: .28rem .42rem .28rem .6rem; font-size: .7rem; font-weight: 750; }
@@ -793,8 +795,7 @@ tr.selected-row td:first-child { box-shadow: inset 3px 0 0 var(--brand-primary);
 @media (max-width: 1180px) {
   .kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .dashboard-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .dashboard-filter-row { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .dashboard-more-filter { width: 100%; }
+  .dashboard-filter-row { grid-template-columns: repeat(4,minmax(0,1fr)); }
   .content-grid, .content-grid.equal { grid-template-columns: 1fr; }
   .report-curation-grid { grid-template-columns: 1fr; }
   .analysis-facts-grid { grid-template-columns: 1fr; }
