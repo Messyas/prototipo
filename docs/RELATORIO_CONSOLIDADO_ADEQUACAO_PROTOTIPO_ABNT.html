@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Hanaro — Relatório Consolidado de Adequação do Protótipo</title>
+  <style>
+    @page { size: A4; margin: 30mm 20mm 20mm 30mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #000; background: #fff; font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; }
+    .cover { height: 247mm; position: relative; text-align: center; page-break-after: always; }
+    .cover-org { padding-top: 10mm; font-weight: bold; text-transform: uppercase; }
+    .cover-title { margin-top: 62mm; font-size: 14pt; font-weight: bold; text-transform: uppercase; line-height: 1.5; }
+    .cover-subtitle { margin: 8mm auto 0; width: 135mm; }
+    .cover-place { position: absolute; right: 0; bottom: 0; left: 0; text-align: center; }
+    .pretext { page-break-after: always; }
+    .toc-placeholder { color: #000; }
+    h1 { margin: 12mm 0 6mm; font-size: 12pt; font-weight: bold; text-transform: uppercase; line-height: 1.5; page-break-before: always; page-break-after: avoid; }
+    h1.first { page-break-before: auto; }
+    h2 { margin: 8mm 0 4mm; font-size: 12pt; font-weight: bold; line-height: 1.5; page-break-after: avoid; }
+    h3 { margin: 6mm 0 3mm; font-size: 12pt; font-weight: bold; font-style: italic; line-height: 1.5; page-break-after: avoid; }
+    p { margin: 0 0 3mm; text-align: justify; text-indent: 12.5mm; }
+    p.no-indent, .caption, td p, th p { text-indent: 0; }
+    ul, ol { margin: 0 0 4mm 12.5mm; padding-left: 6mm; }
+    li { margin: 0 0 1.5mm; text-align: justify; }
+    table { width: 100%; margin: 4mm 0 6mm; border-collapse: collapse; font-size: 10pt; line-height: 1.25; page-break-inside: auto; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 0.7pt solid #000; padding: 2mm; vertical-align: top; }
+    th { font-weight: bold; text-align: center; background: #e6e6e6; }
+    .caption { margin: 4mm 0 1mm; text-align: left; font-size: 10pt; }
+    .source { margin: -4mm 0 6mm; text-align: left; text-indent: 0; font-size: 10pt; }
+    .formula { margin: 3mm 0 5mm 12.5mm; border-left: 2pt solid #666; padding: 3mm 5mm; font-family: "Courier New", monospace; font-size: 10.5pt; line-height: 1.35; white-space: pre-wrap; }
+    .status { font-weight: bold; white-space: nowrap; }
+    .confirmed { color: #155724; }
+    .observed { color: #004085; }
+    .recommended { color: #6f4200; }
+    .pending { color: #721c24; }
+    .callout { margin: 5mm 0; border: 1pt solid #000; padding: 4mm; }
+    .callout p:last-child { margin-bottom: 0; }
+    .wireframe { margin: 4mm 0 6mm; border: 0.7pt solid #000; padding: 4mm; font-family: "Courier New", monospace; font-size: 9pt; line-height: 1.25; white-space: pre-wrap; }
+    .keywords { margin-top: 5mm; text-indent: 0; }
+    .page-break { page-break-before: always; }
+    .references p { padding-left: 12.5mm; text-indent: -12.5mm; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="cover-org">HANARO — MATERIAL SCRAP / IF COST</div>
+    <div class="cover-title">RELATÓRIO CONSOLIDADO DO PLANO DE ADEQUAÇÃO DO PROTÓTIPO</div>
+    <div class="cover-subtitle">Compilação rastreável das revisões, decisões, recomendações e pendências levantadas a partir do protótipo, da planilha operacional, das notas de reunião e do relatório de referência.</div>
+    <div class="cover-place">Manaus<br />2026</div>
+  </section>
+
+  <section class="pretext">
+    <h1 class="first">RESUMO</h1>
+    <p>Este relatório consolida o plano de adequação do protótipo navegável Hanaro — Material Scrap / IF Cost. O documento confronta o estado atual do protótipo com a planilha operacional de controle de scrap, as notas da reunião de 14 de agosto de 2026, os esclarecimentos posteriores do solicitante, a apresentação Rev04 utilizada como referência de relatório final e a proposta de custo de refugo relativo. A consolidação preserva a distinção entre requisitos confirmados, fatos observados nas fontes, recomendações de solução e pontos ainda pendentes de validação. O resultado define a arquitetura de telas, os gráficos, os filtros, as fórmulas, as regras de acesso, o fluxo de justificativas e planos de ação, a geração futura de PPTX, as dependências de dados e a sequência de implementação. Conclui-se que a adequação é viável, porém depende principalmente da homologação do tratamento de estornos, da fonte de produção e Material Amount, do mapeamento de postos no heatmap e dos detalhes do template de relatório.</p>
+    <p class="keywords"><strong>Palavras-chave:</strong> Material Scrap. IF Cost. Dashboard. QTY Scrap. Pareto. Heatmap. Material Amount. Protótipo navegável.</p>
+
+    <h1>LISTA DE SIGLAS E TERMOS</h1>
+    <table>
+      <thead><tr><th>Sigla/termo</th><th>Significado adotado</th></tr></thead>
+      <tbody>
+        <tr><td>GERP</td><td>Sistema de origem consultado para obtenção dos registros operacionais.</td></tr>
+        <tr><td>IF Cost</td><td>Custo financeiro normalizado do material descartado, convertido para dólar.</td></tr>
+        <tr><td>QTY Scrap</td><td>Quantidade de scrap normalizada pela inversão do sinal da movimentação de origem.</td></tr>
+        <tr><td>Material Amount</td><td>Valor material associado à produção do mesmo período e escopo do IF Cost.</td></tr>
+        <tr><td>MoM</td><td>Comparação com o mês imediatamente anterior.</td></tr>
+        <tr><td>YoY</td><td>Comparação com o mesmo mês do ano anterior.</td></tr>
+        <tr><td>YTD</td><td>Acumulado do início do ano até o último mês comum considerado.</td></tr>
+        <tr><td>BOM</td><td>Lista e quantidade padrão de componentes necessários por produto.</td></tr>
+        <tr><td>PPTX</td><td>Formato editável de apresentação Microsoft PowerPoint.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>SUMÁRIO</h1>
+    <p class="no-indent toc-placeholder">[[SUMARIO_AUTOMATICO]]</p>
+  </section>
+
+  <h1 class="first">1 INTRODUÇÃO</h1>
+  <p>O Hanaro é um protótipo navegável voltado ao acompanhamento de Material Scrap e IF Cost. A revisão do escopo mostrou que o sistema não deve apenas reproduzir uma planilha, mas transformar um conjunto de controles operacionais em uma experiência coerente de consulta, investigação, justificativa, plano de ação, auditoria e relatório. Ao mesmo tempo, a proximidade com o Dashboard conhecido pelos usuários é um requisito de adoção e compreensão.</p>
+  <p>O objetivo deste documento é condensar o entendimento alcançado e permitir uma avaliação honesta do plano de adequação. Por essa razão, recomendações de design não são apresentadas como fatos confirmados, e limitações das fontes são explicitadas.</p>
+
+  <h2>1.1 Objetivo geral</h2>
+  <p>Definir o conjunto de revisões necessárias para que o protótipo represente de forma navegável e rastreável o processo futuro de análise de scrap, mantendo compatibilidade conceitual com a planilha e criando base para o relatório mensal em PPTX.</p>
+
+  <h2>1.2 Escopo desta consolidação</h2>
+  <ul>
+    <li>diagnóstico do protótipo atual;</li>
+    <li>inventário dos gráficos e filtros da planilha;</li>
+    <li>regras de cálculo de QTY Scrap, IF Cost e análises relativas;</li>
+    <li>arquitetura de telas, perfis e permissões;</li>
+    <li>fluxo de justificativas, ações, relatórios e auditoria;</li>
+    <li>layout e experiência do Dashboard;</li>
+    <li>ordem de implementação, riscos e pendências.</li>
+  </ul>
+
+  <h1>2 MÉTODO E FONTES DE EVIDÊNCIA</h1>
+  <p>A consolidação foi construída por inspeção do protótipo, leitura estrutural dos arquivos fornecidos e registro dos esclarecimentos do solicitante. Para manter a rastreabilidade, as fontes receberam identificadores internos.</p>
+
+  <p class="caption"><strong>Quadro 1 — Fontes utilizadas</strong></p>
+  <table>
+    <thead><tr><th>ID</th><th>Fonte</th><th>Contribuição</th></tr></thead>
+    <tbody>
+      <tr><td>F1</td><td>Protótipo navegável atual: HTML, CSS e JavaScript</td><td>Estado atual das telas, fluxos, filtros, gráficos e dados simulados.</td></tr>
+      <tr><td>F2</td><td>Controle de Scrap - IF Cost Rev01.xlsm</td><td>Estrutura operacional, campos, sinais, targets, slicers, gráficos e totais.</td></tr>
+      <tr><td>F3</td><td>Notas manuscritas e requisitos da reunião de 14/08/2026</td><td>Demandas de negócio, perfis, heatmap, ranking, atualização e privacidade.</td></tr>
+      <tr><td>F4</td><td>Esclarecimentos fornecidos entre 14 e 15/08/2026</td><td>Cadência de duas horas, QTY Scrap, quatro perfis, histórico anual, e-mail e PPTX.</td></tr>
+      <tr><td>F5</td><td>Rev04_Capability_IF Cost 1.pptx</td><td>Referência do relatório final, mapas, ações, evidências e resumo executivo.</td></tr>
+      <tr><td>F6</td><td>solucao_ouro.html</td><td>Exemplo da análise de IF Cost relativo e comparação justa entre linhas.</td></tr>
+    </tbody>
+  </table>
+  <p class="source">Fonte: elaboração própria a partir dos arquivos e esclarecimentos fornecidos.</p>
+
+  <h2>2.1 Classificação das afirmações</h2>
+  <table>
+    <thead><tr><th>Classificação</th><th>Uso no documento</th></tr></thead>
+    <tbody>
+      <tr><td class="status confirmed">CONFIRMADO</td><td>Decisão expressamente informada pelo solicitante ou requisito repetido sem conflito.</td></tr>
+      <tr><td class="status observed">OBSERVADO</td><td>Comportamento, campo, fórmula ou estrutura encontrada diretamente em uma fonte.</td></tr>
+      <tr><td class="status recommended">RECOMENDADO</td><td>Solução proposta para melhorar coerência matemática, UX, segurança ou implementação.</td></tr>
+      <tr><td class="status pending">PENDENTE</td><td>Questão sem informação suficiente ou que exige validação do negócio/dados.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>3 DIAGNÓSTICO DO PROTÓTIPO ATUAL</h1>
+  <p>O protótipo já possui Dashboard, Base de Scrap, revisão em lote, alertas, relatórios, execuções, auditoria, configurações e Modo TV. Também contém navegação entre indicadores e registros. Essas capacidades reduzem o esforço de concepção, mas a implementação atual concentra modelo, estado, renderização e eventos em um arquivo JavaScript monolítico, utiliza taxonomias simuladas e não representa todos os gráficos e regras observados nas fontes. <span class="status observed">[OBSERVADO — F1]</span></p>
+
+  <h2>3.1 Capacidades aproveitáveis</h2>
+  <ul>
+    <li>estrutura visual, sidebar, topbar, tema e responsividade;</li>
+    <li>filtros e estado de navegação;</li>
+    <li>gráficos com ECharts;</li>
+    <li>seleção múltipla e aplicação de justificativa em lote;</li>
+    <li>relatórios, versões e envios simulados;</li>
+    <li>execuções, auditoria e Modo TV.</li>
+  </ul>
+
+  <h2>3.2 Lacunas principais</h2>
+  <ul>
+    <li>ausência do Dashboard público em unidades;</li>
+    <li>ausência de perfis efetivamente aplicados às rotas e aos dados;</li>
+    <li>gráficos da planilha incompletos ou com semântica diferente;</li>
+    <li>target configurado como redução geral, e não grade anual mensal;</li>
+    <li>heatmap ainda não representa o layout real das linhas;</li>
+    <li>justificativa sem todos os campos necessários ao PPTX;</li>
+    <li>ausência de catálogo de componentes e tela de planos de ação;</li>
+    <li>dados relativos de produção e Material Amount ainda inexistentes.</li>
+  </ul>
+
+  <h1>4 DECISÕES CONSOLIDADAS</h1>
+  <p class="caption"><strong>Quadro 2 — Decisões confirmadas</strong></p>
+  <table>
+    <thead><tr><th>Tema</th><th>Decisão</th><th>Fonte</th></tr></thead>
+    <tbody>
+      <tr><td>Cadência</td><td>O GERP muda aproximadamente a cada cinco minutos; a rotina completa Hanaro roda a cada duas horas e possui disparo manual simulado no protótipo.</td><td>F4</td></tr>
+      <tr><td>Quantidade</td><td>A medida oficial é QTY Scrap.</td><td>F2, F4</td></tr>
+      <tr><td>Sinal</td><td>A planilha inverte o sinal da movimentação; não aplica valor absoluto a todas as linhas.</td><td>F2</td></tr>
+      <tr><td>Target</td><td>Os 12 targets mensais são planejados no início do ano e precisam de histórico de anos anteriores.</td><td>F2, F4, F5</td></tr>
+      <tr><td>Comparações</td><td>Devem existir mês anterior, mesmo mês do ano anterior e YTD equivalente.</td><td>F4, F5</td></tr>
+      <tr><td>Produtos/áreas</td><td>A visão consolidada inclui as categorias normalizadas; o Analista pode aplicar recortes sem remover dados da base.</td><td>F3, F4</td></tr>
+      <tr><td>Toggle</td><td>Gráficos permitem alternar entre US$ e unidades.</td><td>F3, F4</td></tr>
+      <tr><td>Privacidade</td><td>Valores monetários podem ser ocultados; o usuário público não acessa US$ nem exportação.</td><td>F3, F4</td></tr>
+      <tr><td>Perfis</td><td>Developer, Usuário comum, Analista e Administrador.</td><td>F4</td></tr>
+      <tr><td>Heatmap</td><td>O mapa deve representar linha, setor e posto, seguindo a lógica visual da Rev04.</td><td>F3, F4, F5</td></tr>
+      <tr><td>E-mail</td><td>Destinatários serão gerenciados por CRUD nas Configurações; o Administrador envia relatórios.</td><td>F4</td></tr>
+      <tr><td>Relatório</td><td>Justificativas e ações devem alimentar um PPTX semelhante à Rev04.</td><td>F4, F5</td></tr>
+      <tr><td>Análise relativa</td><td>Deve existir leitura proporcional que não penalize automaticamente linhas de maior valor agregado.</td><td>F6 e esclarecimento posterior</td></tr>
+    </tbody>
+  </table>
+
+  <h1>5 ARQUITETURA DE TELAS PROPOSTA</h1>
+  <p>A solução revisada possui rotas públicas e autenticadas. O usuário público recebe somente dados agregados em unidades; as demais capacidades exigem login e autorização. <span class="status recommended">[RECOMENDADO]</span></p>
+
+  <p class="caption"><strong>Quadro 3 — Telas e conteúdo principal</strong></p>
+  <table>
+    <thead><tr><th>Tela</th><th>Perfis</th><th>Conteúdo essencial</th></tr></thead>
+    <tbody>
+      <tr><td>Login</td><td>Developer, Analista, Administrador</td><td>Autenticação; acesso alternativo ao painel público.</td></tr>
+      <tr><td>Dashboard público</td><td>Usuário comum</td><td>QTY Scrap, variação, ranking, Pareto e mapa de risco; sem US$, registros ou exportação.</td></tr>
+      <tr><td>Dashboard completo</td><td>Analista, Administrador</td><td>Filtros globais, impacto absoluto, eficiência relativa, targets, rankings, Pareto, mapa e drill-down.</td></tr>
+      <tr><td>Base de Scrap</td><td>Analista, Administrador</td><td>Registros assinados, filtros, seleção, detalhe e acesso à revisão.</td></tr>
+      <tr><td>Revisão</td><td>Analista, Administrador</td><td>Justificativa individual/em lote, 4M, 5 Porquês, causa, ação, evidência e relatório.</td></tr>
+      <tr><td>Componentes</td><td>Analista consulta; Administrador edita</td><td>Código, nome normalizado, aliases, produto/área e ocorrências.</td></tr>
+      <tr><td>Planos de ação</td><td>Analista, Administrador</td><td>Ações, responsáveis, prazos, status, antes/depois e efetividade.</td></tr>
+      <tr><td>Alertas</td><td>Analista, Administrador</td><td>Desvios, concentração, falhas, ações vencidas e registros relacionados.</td></tr>
+      <tr><td>Relatórios</td><td>Analista constrói; Administrador aprova/envia</td><td>Curadoria, preview, versões, PPTX e histórico de entrega.</td></tr>
+      <tr><td>Execuções</td><td>Developer, Administrador; Analista consulta</td><td>Rotina de duas horas, atualização manual simulada, falhas e snapshots.</td></tr>
+      <tr><td>Auditoria</td><td>Conforme escopo do perfil</td><td>Ator, ação, entidade, antes/depois e correlação.</td></tr>
+      <tr><td>Configurações</td><td>Developer/Administrador; consultas do Analista</td><td>Targets, fórmulas, rotina, mapas, e-mails, acesso, integrações e interface.</td></tr>
+      <tr><td>Modo TV</td><td>Público em unidades; autenticado conforme permissão</td><td>Visão executiva, ranking mensal/anual, Pareto, mapa e ações.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>6 DASHBOARD, GRÁFICOS E LAYOUT</h1>
+  <p>A aba Dashboard da planilha contém dez gráficos visíveis: divisão/produto, evolução mensal, evolução semanal, Top 5 ofensores, Top 10 itens, piores linhas e piores modelos, incluindo versões duplicadas em US$ e quantidade. <span class="status observed">[OBSERVADO — F2]</span></p>
+  <p>A adequação recomenda preservar a intenção desses dez gráficos em módulos únicos controlados pelo toggle US$/Unidades. A análise relativa fica em uma aba separada, pois taxas não devem ser aplicadas indiscriminadamente a Pareto e heatmap. <span class="status recommended">[RECOMENDADO]</span></p>
+
+  <h2>6.1 Visão Impacto absoluto</h2>
+  <table>
+    <thead><tr><th>Módulo</th><th>Tipo</th><th>Conteúdo</th></tr></thead>
+    <tbody>
+      <tr><td>Target × realizado mensal</td><td>Linhas com pontos</td><td>Doze targets e resultados; meses fechados, parcial e futuros.</td></tr>
+      <tr><td>Evolução semanal</td><td>Colunas</td><td>IF Cost ou QTY Scrap por semana.</td></tr>
+      <tr><td>Produto/área</td><td>Barras horizontais</td><td>Participação das categorias normalizadas.</td></tr>
+      <tr><td>Pareto de componentes</td><td>Colunas + linha acumulada</td><td>Perdas brutas, participação e referência de 80%.</td></tr>
+      <tr><td>Top componentes</td><td>Barras horizontais</td><td>Ranking dinâmico; nome no eixo e código no detalhe.</td></tr>
+      <tr><td>Ranking de linhas</td><td>Barras horizontais</td><td>Posição atual e variação do período.</td></tr>
+      <tr><td>Ranking de modelos</td><td>Barras horizontais</td><td>Modelos mais afetados.</td></tr>
+      <tr><td>Mapa de risco</td><td>Heatmap espacial</td><td>Layout da linha, zonas, postos, causa e responsável.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 Visão Eficiência relativa</h2>
+  <table>
+    <thead><tr><th>Módulo</th><th>Tipo</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td>IF Cost Rate por linha</td><td>Barras horizontais</td><td>Comparar perda financeira proporcional ao Material Amount.</td></tr>
+      <tr><td>Scrap Rate por componente</td><td>Barras horizontais</td><td>Comparar QTY Scrap com consumo esperado/BOM.</td></tr>
+      <tr><td>Escala × eficiência</td><td>Dispersão com bolhas</td><td>X: Material Amount; Y: taxa relativa; bolha: IF Cost absoluto.</td></tr>
+      <tr><td>Tendência da taxa</td><td>Linha</td><td>Melhora ou piora proporcional ao longo do tempo.</td></tr>
+      <tr><td>Atual × referência</td><td>Slope chart ou colunas</td><td>MoM, YoY ou YTD equivalente.</td></tr>
+      <tr><td>Cobertura</td><td>Indicador/tabela</td><td>Percentual do escopo com denominador válido.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.3 Organização recomendada</h2>
+  <div class="wireframe">[ANO] [PERÍODO] [PRODUTO/ÁREA] [LINHA] [MAIS FILTROS]
+[chips de filtros ativos]                                  [LIMPAR]
+
+[ IMPACTO ABSOLUTO | EFICIÊNCIA RELATIVA ]
+Impacto:    [US$ | UNIDADES] [COMPARAR COM] [OLHO]
+Relativa:   [FINANCEIRA | QUANTITATIVA] [COMPARAR COM]
+
+KPIs
+Target × realizado (8 colunas)       Produto/área (4)
+Evolução semanal (8)                 Ofensores (4)
+Componentes (4)   Linhas (4)         Modelos (4)
+Pareto (12)
+Mapa de risco + tabela (12)
+Ocorrências prioritárias (12)</div>
+  <p>Os filtros principais devem permanecer visíveis. Semana, setor/posto, componente e modelo ficam em “Mais filtros”. Essa organização reduz ruído e aproxima a navegação da planilha sem repetir seus blocos duplicados. <span class="status recommended">[RECOMENDADO]</span></p>
+
+  <h1>7 FÓRMULAS E REGRAS DE CÁLCULO</h1>
+  <h2>7.1 QTY Scrap</h2>
+  <div class="formula">QTY_SCRAPᵢ = - ISSUE_QUANTITYᵢ</div>
+  <p>A inversão transforma a saída negativa do estoque em perda positiva. Movimentações positivas tornam-se ajustes negativos. A planilha confirma a soma assinada de 298.352 unidades. <span class="status observed">[OBSERVADO — F2]</span></p>
+
+  <h2>7.2 IF Cost</h2>
+  <div class="formula">ISSUE_AMOUNT_LOCALᵢ ≈ ISSUE_QUANTITYᵢ × ISSUE_PRICE_LOCALᵢ
+AMOUNT_USD_SOURCEᵢ = ISSUE_AMOUNT_LOCALᵢ ÷ EXCHANGE_RATEᵢ
+IF_COST_USDᵢ = - AMOUNT_USD_SOURCEᵢ</div>
+  <p>A soma assinada reconcilia US$ 703.357,66 com o Dashboard da planilha. Aplicar valor absoluto elevaria o total para US$ 1.157.423,34, apagando o efeito de ajustes. <span class="status observed">[OBSERVADO — F2]</span></p>
+
+  <h2>7.3 Bruto, ajustes e líquido</h2>
+  <div class="formula">GROSS(S) = Σ max(xᵢ, 0)
+ADJUSTMENTS(S) = Σ min(xᵢ, 0)
+NET(S) = GROSS(S) + ADJUSTMENTS(S)</div>
+  <p>O líquido atende ao fechamento e ao target. O bruto atende à investigação dos ofensores. Os ajustes devem aparecer separadamente para manter a reconciliação.</p>
+
+  <h2>7.4 IF Cost relativo</h2>
+  <div class="formula">MATERIAL_AMOUNT_USD(S) = Σ [PRODUCTION_QTYⱼ × STANDARD_MATERIAL_COST_USDⱼ]
+IF_COST_RATE(S) = IF_COST_NET_USD(S) ÷ MATERIAL_AMOUNT_USD(S) × 100</div>
+  <p>O denominador normaliza o prejuízo pelo tamanho econômico da produção. No exemplo F6, uma linha apresenta maior perda absoluta, enquanto outra apresenta taxa relativa vinte vezes maior. As duas leituras são válidas e respondem a perguntas diferentes.</p>
+
+  <h2>7.5 Scrap Rate quantitativo</h2>
+  <div class="formula">EXPECTED_COMPONENT_QTY(S) = Σ [PRODUCTION_QTYⱼ × BOM_QTY_PER_PRODUCTⱼ]
+QTY_SCRAP_RATE(S) = QTY_SCRAP_NET(S) ÷ EXPECTED_COMPONENT_QTY(S) × 100</div>
+  <p>Quando componentes diferentes são somados, recomenda-se usar “componentes descartados por 1.000 produtos”, e não percentual, salvo se existir BOM compatível.</p>
+
+  <h2>7.6 Target e comparação</h2>
+  <div class="formula">TARGET_GAP_USD = ACTUAL_USD - TARGET_USD
+ACHIEVEMENT_PCT = TARGET_USD ÷ ACTUAL_USD × 100
+MOM = (PREVIOUS_MONTH - CURRENT_MONTH) ÷ PREVIOUS_MONTH × 100
+YOY = (SAME_MONTH_PREVIOUS_YEAR - CURRENT_MONTH) ÷ SAME_MONTH_PREVIOUS_YEAR × 100
+YTD = (PREVIOUS_YTD - CURRENT_YTD) ÷ PREVIOUS_YTD × 100</div>
+  <p>Como menor scrap é melhor, atingimento acima de 100% indica resultado melhor que o limite planejado. “Atingimento”, “redução” e “comparação anual” não devem ser usados como sinônimos.</p>
+
+  <h2>7.7 Pareto</h2>
+  <div class="formula">SHAREₖ = GROSSₖ ÷ Σ GROSSₖ × 100
+CUMULATIVE_SHAREₙ = Σ SHAREₖ, para k = 1..n</div>
+  <p>Taxas relativas não são aditivas. Por isso, a aba relativa utiliza ranking, e não curva Pareto acumulada.</p>
+
+  <h1>8 FILTROS, TOGGLES E EXPERIÊNCIA</h1>
+  <p>Filtros reduzem registros; toggles alternam unidade; abas mudam a pergunta de negócio; seletores de comparação definem a referência temporal; controles locais afetam somente um gráfico.</p>
+
+  <h2>8.1 Filtros globais</h2>
+  <ul>
+    <li>Ano e período: seleção única;</li>
+    <li>produto/área e linha: multisseleção;</li>
+    <li>semana: dependente do período;</li>
+    <li>setor/posto: dependente da linha;</li>
+    <li>componente e modelo: busca e multisseleção;</li>
+    <li>chips: resumo removível do contexto ativo;</li>
+    <li>Meu recorte: preferência do Analista, sem alterar o consolidado.</li>
+  </ul>
+
+  <h2>8.2 Regra do denominador</h2>
+  <div class="formula">ESCOPO DO NUMERADOR = ESCOPO DO DENOMINADOR</div>
+  <p>Um IF Cost filtrado por componente não pode ser dividido pelo Material Amount de toda a linha. Quando a fonte não oferecer granularidade compatível, a interface deve mostrar “Não calculável”, nunca 0%.</p>
+
+  <h2>8.3 Compatibilidade resumida</h2>
+  <table>
+    <thead><tr><th>Filtro</th><th>Absoluto</th><th>IF Cost relativo</th><th>Scrap Rate</th></tr></thead>
+    <tbody>
+      <tr><td>Ano/mês/semana</td><td>Sim</td><td>Se produção tiver mesma granularidade</td><td>Se produção tiver mesma granularidade</td></tr>
+      <tr><td>Produto/área e linha</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Modelo</td><td>Sim</td><td>Com Material Amount por modelo</td><td>Com produção/BOM por modelo</td></tr>
+      <tr><td>Componente</td><td>Sim</td><td>Com valor material do componente</td><td>Com consumo esperado/BOM</td></tr>
+      <tr><td>Setor/posto</td><td>Sim</td><td>Com denominador por posto</td><td>Com produção por posto</td></tr>
+      <tr><td>Status de revisão</td><td>Investigação</td><td>Não recomendado</td><td>Não recomendado</td></tr>
+    </tbody>
+  </table>
+
+  <h1>9 PERFIS, SEGURANÇA E PRIVACIDADE</h1>
+  <table>
+    <thead><tr><th>Capacidade</th><th>Developer</th><th>Usuário comum</th><th>Analista</th><th>Administrador</th></tr></thead>
+    <tbody>
+      <tr><td>Dashboard público/TV em unidades</td><td>Sim</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Dashboard completo e US$</td><td>Suporte controlado</td><td>Não</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Base, justificativa e ações</td><td>Não por padrão</td><td>Não</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Targets, mapas e rotina</td><td>Não</td><td>Não</td><td>Consulta</td><td>Administra</td></tr>
+      <tr><td>Gerar/revisar relatório</td><td>Não</td><td>Não</td><td>Sim</td><td>Sim</td></tr>
+      <tr><td>Enviar relatório</td><td>Não</td><td>Não</td><td>Não</td><td>Sim</td></tr>
+      <tr><td>Cadastrar pessoas/autoridade</td><td>Exclusivo</td><td>Não</td><td>Não</td><td>Não</td></tr>
+    </tbody>
+  </table>
+  <p>O usuário público não deve receber campos financeiros no payload. O botão de olho é proteção visual para sessões autorizadas, não mecanismo de autorização.</p>
+
+  <h1>10 ATUALIZAÇÃO, JUSTIFICATIVAS E RELATÓRIO</h1>
+  <h2>10.1 Atualização</h2>
+  <p>O GERP muda aproximadamente a cada cinco minutos, mas o Hanaro publica um snapshot após a rotina de duas horas. Dashboard e relatório devem informar data/hora, Execution ID e gatilho agendado ou manual. No protótipo, a atualização manual apenas simula estados e auditoria. <span class="status confirmed">[CONFIRMADO — F4]</span></p>
+
+  <h2>10.2 Justificativas e planos de ação</h2>
+  <p>O formulário precisa registrar problema, sintoma, linha/setor/posto, modelo, 4M, 5 Porquês, causa raiz, ação imediata/corretiva/preventiva, responsável, prazo, custo, QTY Scrap, evidências e efetividade. Uma justificativa pode ser aplicada a vários scraps, mas cada registro deve manter evento individual de auditoria.</p>
+
+  <h2>10.3 Relatório PPTX</h2>
+  <p>A apresentação F5 possui 27 slides, 135 mídias, quatro gráficos e 14 objetos incorporados. Isso demonstra que o relatório é híbrido: valores e gráficos vêm do snapshot; o Analista seleciona casos e revisa a narrativa; o Administrador aprova, gera e envia uma versão imutável. <span class="status observed">[OBSERVADO — F5]</span></p>
+  <p>O protótipo demonstrará construtor, preview, pendências, aprovação, versão e envio simulado. A geração binária real do PPTX dependerá de backend.</p>
+
+  <h1>11 DICIONÁRIO DE DADOS RESUMIDO</h1>
+  <p class="caption"><strong>Quadro 4 — Registro representativo de scrap</strong></p>
+  <table>
+    <thead><tr><th>Campo</th><th>Exemplo</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td>scrap_id</td><td>SCR-2025-000001</td><td>Identificador Hanaro.</td></tr>
+      <tr><td>transaction_date</td><td>2025-01-14</td><td>Data da movimentação.</td></tr>
+      <tr><td>department</td><td>FA</td><td>Área/departamento.</td></tr>
+      <tr><td>product_area</td><td>BM</td><td>Categoria normalizada.</td></tr>
+      <tr><td>line_code</td><td>BMCELL</td><td>Linha/Receipt Department.</td></tr>
+      <tr><td>item_code</td><td>ACQ30524303</td><td>Código do componente.</td></tr>
+      <tr><td>item_description</td><td>Cover Assembly, LED</td><td>Nome apresentado no eixo/detalhe.</td></tr>
+      <tr><td>issue_quantity</td><td>-1</td><td>Quantidade assinada da origem.</td></tr>
+      <tr><td>qty_scrap</td><td>1</td><td>Quantidade normalizada.</td></tr>
+      <tr><td>issue_price_local</td><td>196,03085</td><td>Custo unitário local.</td></tr>
+      <tr><td>exchange_rate</td><td>6,0396495747</td><td>Taxa de conversão.</td></tr>
+      <tr><td>if_cost_usd</td><td>32,4572</td><td>IF Cost normalizado.</td></tr>
+      <tr><td>execution_id</td><td>EXE-20260815-0800</td><td>Snapshot de incorporação.</td></tr>
+    </tbody>
+  </table>
+
+  <p class="caption"><strong>Quadro 5 — Entidades necessárias</strong></p>
+  <table>
+    <thead><tr><th>Entidade</th><th>Uso</th></tr></thead>
+    <tbody>
+      <tr><td>scrap_transaction</td><td>Registro bruto/normalizado de scrap.</td></tr>
+      <tr><td>production_summary</td><td>Produção, custo padrão e Material Amount por período/escopo.</td></tr>
+      <tr><td>component</td><td>Código, nome normalizado e aliases.</td></tr>
+      <tr><td>monthly_target</td><td>Target por ano, mês e escopo.</td></tr>
+      <tr><td>justification</td><td>Causa, 4M, 5 Porquês e evidências.</td></tr>
+      <tr><td>action_plan</td><td>Ação, responsável, prazo, status e efetividade.</td></tr>
+      <tr><td>line_layout/risk_point</td><td>Mapa, postos, coordenadas e risco.</td></tr>
+      <tr><td>execution/data_snapshot</td><td>Rotina e versão dos dados.</td></tr>
+      <tr><td>report/report_delivery</td><td>Versão, aprovação e envio.</td></tr>
+      <tr><td>user/email_recipient/audit_event</td><td>Acesso, destinatários e rastreabilidade.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>12 PLANO DE IMPLEMENTAÇÃO</h1>
+  <h2>12.1 Fase 1 — Fundação</h2>
+  <ul>
+    <li>modularizar o JavaScript atual;</li>
+    <li>criar rotas públicas/autenticadas e os quatro perfis;</li>
+    <li>centralizar filtros e cálculos;</li>
+    <li>criar fixtures assinadas e snapshots.</li>
+  </ul>
+
+  <h2>12.2 Fase 2 — Impacto absoluto</h2>
+  <ul>
+    <li>Dashboard público;</li>
+    <li>Dashboard completo com US$/Unidades e olho;</li>
+    <li>transposição dos gráficos da planilha;</li>
+    <li>targets, MoM, YoY e YTD;</li>
+    <li>Pareto e rankings dinâmicos.</li>
+  </ul>
+
+  <h2>12.3 Fase 3 — Investigação</h2>
+  <ul>
+    <li>Base e revisão em lote;</li>
+    <li>catálogo de componentes;</li>
+    <li>planos de ação e alertas;</li>
+    <li>mapa de risco e drill-down.</li>
+  </ul>
+
+  <h2>12.4 Fase 4 — Governança</h2>
+  <ul>
+    <li>targets anuais e histórico;</li>
+    <li>rotina e disparo manual;</li>
+    <li>CRUD de e-mails;</li>
+    <li>acesso Developer e auditoria.</li>
+  </ul>
+
+  <h2>12.5 Fase 5 — Eficiência relativa</h2>
+  <ul>
+    <li>integrar produção, custo padrão, Material Amount e BOM;</li>
+    <li>validar cobertura e granularidade;</li>
+    <li>implementar taxas, ranking relativo e dispersão;</li>
+    <li>incluir as análises no relatório e TV autorizado.</li>
+  </ul>
+
+  <h2>12.6 Fase 6 — Relatório e homologação</h2>
+  <ul>
+    <li>construtor e preview do PPTX;</li>
+    <li>versões, aprovação e envio simulado;</li>
+    <li>reconciliação com a planilha;</li>
+    <li>validação de uma amostra contra a Rev04;</li>
+    <li>testes de permissão, responsividade e acessibilidade.</li>
+  </ul>
+
+  <h1>13 PONTOS AINDA NÃO ESCLARECIDOS</h1>
+  <p class="caption"><strong>Quadro 6 — Pendências de decisão ou dados</strong></p>
+  <table>
+    <thead><tr><th>Pendência</th><th>Impacto</th><th>Encaminhamento recomendado</th></tr></thead>
+    <tbody>
+      <tr><td>Classificação definitiva de estorno/devolução</td><td>Afeta bruto, líquido, alertas e relatório.</td><td>Homologar com analista/contabilidade; preservar sinal até decisão.</td></tr>
+      <tr><td>Fonte de produção e Material Amount</td><td>Bloqueia IF Cost relativo real.</td><td>Definir sistema, granularidade, custo padrão e moeda.</td></tr>
+      <tr><td>BOM/consumo esperado</td><td>Bloqueia Scrap Rate percentual por componente.</td><td>Integrar BOM ou usar índice por 1.000 produtos.</td></tr>
+      <tr><td>Target relativo</td><td>Impede comparar taxa com meta.</td><td>Manter apenas target absoluto até homologação.</td></tr>
+      <tr><td>Rounding e fonte oficial da taxa de câmbio</td><td>Pode gerar divergência de centavos/totais.</td><td>Documentar ponto de arredondamento e fonte.</td></tr>
+      <tr><td>Layouts, setores, postos e coordenadas</td><td>Bloqueia heatmap real por linha.</td><td>Cadastrar layouts versionados e chaves de associação.</td></tr>
+      <tr><td>Thresholds baixo/moderado/crítico</td><td>Cores podem mudar de significado.</td><td>Configurar por métrica/escopo; não usar apenas máximo do mês.</td></tr>
+      <tr><td>Disponibilidade real de VS, SMT e IPI na fonte</td><td>Pode criar filtros sem registros.</td><td>Validar massa de integração e códigos canônicos.</td></tr>
+      <tr><td>Fluxo final de aprovação do PPTX</td><td>Afeta status e permissões.</td><td>Confirmar se Administrador é aprovador obrigatório.</td></tr>
+      <tr><td>Consentimento e política de e-mails</td><td>Afeta elegibilidade dos destinatários.</td><td>Definir categorias, aceite, inativação e retenção.</td></tr>
+      <tr><td>Escopo público do percentual relativo financeiro</td><td>Pode derivar informação sensível.</td><td>Manter indisponível ao público até decisão explícita.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>14 RISCOS E MEDIDAS DE CONTROLE</h1>
+  <table>
+    <thead><tr><th>Risco</th><th>Consequência</th><th>Controle</th></tr></thead>
+    <tbody>
+      <tr><td>Aplicar ABS aos movimentos</td><td>Inflação de QTY Scrap e IF Cost.</td><td>Preservar sinal e reconciliar com a planilha.</td></tr>
+      <tr><td>Taxa com denominador incompatível</td><td>Comparação matematicamente falsa.</td><td>Validar escopo e mostrar “Não calculável”.</td></tr>
+      <tr><td>Substituir absoluto pelo relativo</td><td>Oculta grande impacto financeiro.</td><td>Manter abas complementares.</td></tr>
+      <tr><td>Somar taxas em Pareto</td><td>Curva acumulada inválida.</td><td>Pareto apenas com medida aditiva.</td></tr>
+      <tr><td>Ocultar US$ apenas no front-end</td><td>Vazamento de dados no payload.</td><td>Payload público sem campos monetários.</td></tr>
+      <tr><td>Copiar séries congeladas da planilha</td><td>Dashboard deixa de reagir aos dados.</td><td>Calcular indicadores sobre o snapshot filtrado.</td></tr>
+      <tr><td>Automatizar narrativa do PPTX sem evidência</td><td>Conclusões ou causas inventadas.</td><td>Curadoria e aprovação humanas.</td></tr>
+      <tr><td>Adicionar escopo sem modularizar</td><td>Regressões no JavaScript monolítico.</td><td>Refatorar estado, domínio, telas e gráficos.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>15 CRITÉRIOS PARA CONSIDERAR O PLANO ADEQUADO</h1>
+  <ol>
+    <li>As intenções analíticas dos dez gráficos da planilha estão representadas.</li>
+    <li>O toggle US$/Unidades é global na visão absoluta e não perde filtros.</li>
+    <li>A análise relativa está separada e usa denominadores compatíveis.</li>
+    <li>O usuário público não recebe nem exporta dados financeiros.</li>
+    <li>QTY Scrap e IF Cost reconciliam os sinais e totais da fonte.</li>
+    <li>Target anual, meses parciais/futuros, MoM, YoY e YTD estão coerentes.</li>
+    <li>Pareto, rankings, títulos e conclusões são dinâmicos.</li>
+    <li>Heatmap liga linha, setor, posto, causa e responsável.</li>
+    <li>Justificativa em lote mantém auditoria por scrap.</li>
+    <li>Planos de ação e evidências alimentam o construtor do relatório.</li>
+    <li>Rotina de duas horas e atualização manual estão representadas sem alegar backend.</li>
+    <li>O PPTX usa snapshot imutável e narrativa humana revisada.</li>
+    <li>As pendências do capítulo 13 possuem responsável e decisão antes da implementação correspondente.</li>
+  </ol>
+
+  <h1>16 CONCLUSÃO</h1>
+  <p>O plano de adequação é consistente com as fontes analisadas e preserva a familiaridade da planilha, ao mesmo tempo que organiza o sistema em experiências públicas, analíticas, administrativas e de relatório. A separação entre Impacto absoluto e Eficiência relativa resolve a necessidade de comparar volume financeiro, quantidade e desempenho proporcional sem misturar fórmulas.</p>
+  <p>A viabilidade da primeira revisão do protótipo não depende da análise relativa: a visão absoluta, os gráficos da planilha, os filtros, os perfis, o target, a investigação e o fluxo de relatório podem ser representados com dados simulados. Entretanto, qualquer taxa relativa real deve aguardar a fonte homologada de produção, Material Amount e, quando aplicável, BOM.</p>
+  <p>O documento não deve ser tratado como especificação fechada para os itens pendentes. Ele funciona como baseline rastreável para validação, priorização e implementação incremental.</p>
+
+  <h1>REFERÊNCIAS INTERNAS</h1>
+  <div class="references">
+    <p>F1 — HANARO. <strong>Protótipo navegável atual</strong>: index.html, styles.css e scripts.js. Manaus, 2026.</p>
+    <p>F2 — CONTROLE DE SCRAP — IF COST. <strong>Controle de Scrap - IF Cost Rev01.xlsm</strong>. Planilha operacional fornecida para análise. 2026.</p>
+    <p>F3 — REUNIÃO HANARO. <strong>Notas manuscritas e requisitos de 14 de agosto de 2026</strong>. Registro fotográfico fornecido pelo solicitante. 2026.</p>
+    <p>F4 — SOLICITANTE. <strong>Esclarecimentos de negócio e acesso fornecidos em 14 e 15 de agosto de 2026</strong>. Comunicação de projeto. 2026.</p>
+    <p>F5 — LGE. <strong>Rev04_Capability_IF Cost 1.pptx</strong>. Apresentação de referência para relatório mensal e planos de ação. 2026.</p>
+    <p>F6 — HANARO. <strong>solucao_ouro.html: Custo de Refugo Relativo</strong>. Exemplo conceitual fornecido para revisão. 2026.</p>
+  </div>
+
+  <h1>APÊNDICE A — MATRIZ DE RASTREABILIDADE RESUMIDA</h1>
+  <table>
+    <thead><tr><th>Necessidade</th><th>Fonte</th><th>Status</th><th>Adequação prevista</th></tr></thead>
+    <tbody>
+      <tr><td>Target mensal anual</td><td>F2, F3, F4, F5</td><td class="confirmed">Confirmado</td><td>Configurações por ano/mês, histórico e versão.</td></tr>
+      <tr><td>US$ ↔ unidades</td><td>F2, F3, F4</td><td class="confirmed">Confirmado</td><td>Toggle global na visão absoluta.</td></tr>
+      <tr><td>Pareto dinâmico</td><td>F2, F3</td><td class="confirmed">Confirmado</td><td>Pareto de perdas brutas calculado.</td></tr>
+      <tr><td>Justificativa em lote</td><td>F1, F3</td><td class="confirmed">Parcialmente existente</td><td>Ampliar campos e auditoria.</td></tr>
+      <tr><td>Ocultar valores</td><td>F3, F4</td><td class="confirmed">Confirmado</td><td>Olho em sessão autorizada e payload público seguro.</td></tr>
+      <tr><td>Quatro perfis</td><td>F4</td><td class="confirmed">Confirmado</td><td>Guards de rota, ação e dados.</td></tr>
+      <tr><td>Heatmap de linha/posto</td><td>F3, F4, F5</td><td class="confirmed">Formato confirmado</td><td>Layout espacial versionado; dados ainda pendentes.</td></tr>
+      <tr><td>Atualização a cada duas horas</td><td>F4</td><td class="confirmed">Confirmado</td><td>Execuções e disparo manual simulado.</td></tr>
+      <tr><td>Ranking mensal/anual no TV</td><td>F3, F4</td><td class="confirmed">Confirmado</td><td>Painéis rotativos em unidades/premissão.</td></tr>
+      <tr><td>Relatório PPTX</td><td>F4, F5</td><td class="confirmed">Objetivo confirmado</td><td>Construtor, curadoria, versão e envio.</td></tr>
+      <tr><td>IF Cost relativo</td><td>F6</td><td class="recommended">Conceito aceito</td><td>Aba separada; depende de Material Amount.</td></tr>
+      <tr><td>Scrap Rate por componente</td><td>F3, F6</td><td class="pending">Dependência</td><td>Exige produção e BOM compatíveis.</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>
