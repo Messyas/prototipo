@@ -854,7 +854,8 @@ function initCharts() {
   if (!window.echarts) return;
   const css = getComputedStyle(document.documentElement), main = css.getPropertyValue('--chart-main').trim(), secondary = css.getPropertyValue('--chart-secondary').trim(), muted = css.getPropertyValue('--app-text-muted').trim(), grid = css.getPropertyValue('--app-chart-grid').trim(), text = css.getPropertyValue('--app-text-secondary').trim();
   const surface = css.getPropertyValue('--app-surface-raised').trim(), border = css.getPropertyValue('--app-border').trim(), foreground = css.getPropertyValue('--app-text').trim();
-  const blue = css.getPropertyValue('--chart-tertiary').trim() || '#5b8def', success = css.getPropertyValue('--app-success').trim() || '#16834b';
+  const blue = css.getPropertyValue('--chart-tertiary').trim() || '#16834b', success = css.getPropertyValue('--app-success').trim() || '#16834b';
+  const targetColor = css.getPropertyValue('--chart-target').trim() || css.getPropertyValue('--chart-tertiary').trim() || success;
   $$(state.tvActive ? '#tv-mode .echart' : '#page-content .echart').forEach((element) => {
     const data = pendingCharts[Number(element.dataset.chartIndex)]; if (!data) return;
     const instance = echarts.init(element, null, { renderer: 'svg' });
@@ -863,7 +864,7 @@ function initCharts() {
     if (data.kind === 'monthly') {
       const series = [{ name: data.actualLabel || 'Realizado', type: 'line', data: data.actual, connectNulls: false, symbol: 'circle', symbolSize: 7, lineStyle: { width: 3, color: main }, itemStyle: { color: main }, emphasis: { focus: 'series' } }];
       if (data.previous?.length) series.push({ name: data.previousLabel || 'Referência', type: 'line', data: data.previous, connectNulls: false, symbol: 'none', lineStyle: { width: 2, color: secondary }, itemStyle: { color: secondary } });
-      if (data.target?.length) series.push({ name: 'Target', type: 'line', data: data.target, symbol: 'circle', symbolSize: 5, lineStyle: { width: 2, type: 'dashed', color: blue }, itemStyle: { color: blue } });
+      if (data.target?.length) series.push({ name: 'Target', type: 'line', data: data.target, symbol: 'circle', symbolSize: 5, lineStyle: { width: 2, type: 'dashed', color: targetColor }, itemStyle: { color: targetColor } });
       instance.setOption({
         animationDuration: 400,
         grid: { left: 16, right: 18, top: 20, bottom: 28, containLabel: true },

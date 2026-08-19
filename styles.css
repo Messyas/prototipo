@@ -58,7 +58,8 @@
   --app-focus-ring: rgb(165 0 52 / 24%);
   --chart-main: #a50034;
   --chart-secondary: #bdc7df;
-  --chart-tertiary: #81aef1;
+  --chart-tertiary: #16834b;
+  --chart-target: #16834b;
 }
 
 :root[data-theme='dark'] {
@@ -108,7 +109,8 @@
   --app-focus-ring: rgb(231 25 74 / 30%);
   --chart-main: #e7194a;
   --chart-secondary: #66728d;
-  --chart-tertiary: #78a6ff;
+  --chart-tertiary: #5ad6b3;
+  --chart-target: #5ad6b3;
 }
 
 * { box-sizing: border-box; }
@@ -250,7 +252,7 @@ textarea.control { height: auto; min-height: 6rem; resize: vertical; }
 .chart-grid-line { stroke: var(--app-chart-grid); stroke-width: 1; }
 .chart-line-main { fill: none; stroke: var(--chart-main); stroke-width: 3; }
 .chart-line-secondary { fill: none; stroke: var(--chart-secondary); stroke-width: 3; }
-.chart-line-target { fill: none; stroke: var(--app-text-muted); stroke-width: 1.5; stroke-dasharray: 5 5; }
+.chart-line-target { fill: none; stroke: var(--chart-target, var(--app-success)); stroke-width: 1.5; stroke-dasharray: 5 5; }
 .chart-label { fill: var(--app-text-muted); font: 10px 'Fustat Variable',sans-serif; }
 .chart-legend { display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: .5rem; color: var(--app-text-secondary); font-size: .7rem; }
 .legend-key::before { display: inline-block; width: .75rem; height: 2px; margin-right: .35rem; background: var(--key); content: ''; vertical-align: middle; }
