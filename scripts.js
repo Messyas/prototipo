@@ -854,7 +854,8 @@ function initCharts() {
   if (!window.echarts) return;
   const css = getComputedStyle(document.documentElement), main = css.getPropertyValue('--chart-main').trim(), secondary = css.getPropertyValue('--chart-secondary').trim(), muted = css.getPropertyValue('--app-text-muted').trim(), grid = css.getPropertyValue('--app-chart-grid').trim(), text = css.getPropertyValue('--app-text-secondary').trim();
   const surface = css.getPropertyValue('--app-surface-raised').trim(), border = css.getPropertyValue('--app-border').trim(), foreground = css.getPropertyValue('--app-text').trim();
-  const blue = css.getPropertyValue('--chart-tertiary').trim() || '#5b8def', success = css.getPropertyValue('--app-success').trim() || '#16834b';
+  const blue = css.getPropertyValue('--chart-tertiary').trim() || '#16834b', success = css.getPropertyValue('--app-success').trim() || '#16834b';
+  const targetColor = css.getPropertyValue('--chart-target').trim() || css.getPropertyValue('--chart-tertiary').trim() || success;
   $$(state.tvActive ? '#tv-mode .echart' : '#page-content .echart').forEach((element) => {
     const data = pendingCharts[Number(element.dataset.chartIndex)]; if (!data) return;
     const instance = echarts.init(element, null, { renderer: 'svg' });
@@ -863,7 +864,7 @@ function initCharts() {
     if (data.kind === 'monthly') {
       const series = [{ name: data.actualLabel || 'Realizado', type: 'line', data: data.actual, connectNulls: false, symbol: 'circle', symbolSize: 7, lineStyle: { width: 3, color: main }, itemStyle: { color: main }, emphasis: { focus: 'series' } }];
       if (data.previous?.length) series.push({ name: data.previousLabel || 'Referência', type: 'line', data: data.previous, connectNulls: false, symbol: 'none', lineStyle: { width: 2, color: secondary }, itemStyle: { color: secondary } });
-      if (data.target?.length) series.push({ name: 'Target', type: 'line', data: data.target, symbol: 'circle', symbolSize: 5, lineStyle: { width: 2, type: 'dashed', color: blue }, itemStyle: { color: blue } });
+      if (data.target?.length) series.push({ name: 'Target', type: 'line', data: data.target, symbol: 'circle', symbolSize: 5, lineStyle: { width: 2, type: 'dashed', color: targetColor }, itemStyle: { color: targetColor } });
       instance.setOption({
         animationDuration: 400,
         grid: { left: 16, right: 18, top: 20, bottom: 28, containLabel: true },
@@ -1006,6 +1007,7 @@ const dashboardSpreadsheetSeries = {
   previousUsd: [27874, 24988, 23632, 31277, 27796, 37045, 39147, 38500, null, null, null, null],
   actualQty: [170, 156, 149, 138, 182, 161, 145, 146, null, null, null, null],
   previousQty: [189, 172, 164, 153, 198, 176, 159, 162, null, null, null, null],
+  grossUsd: [], reversalUsd: [], grossQty: [], reversalQty: [],
 };
 
 // Massa exclusivamente demonstrativa para validar a experiência da análise relativa.
@@ -1031,30 +1033,40 @@ const relativeDenominatorMock = (() => {
 function dashboardPeriodContext(filters, metric) {
   const actual = metric === 'usd' ? dashboardSpreadsheetSeries.actualUsd : dashboardSpreadsheetSeries.actualQty;
   const previousYear = metric === 'usd' ? dashboardSpreadsheetSeries.previousUsd : dashboardSpreadsheetSeries.previousQty;
+  const grossSeries = metric === 'usd' ? dashboardSpreadsheetSeries.grossUsd : dashboardSpreadsheetSeries.grossQty;
+  const reversalSeries = metric === 'usd' ? dashboardSpreadsheetSeries.reversalUsd : dashboardSpreadsheetSeries.reversalQty;
+  const availableIndexes = actual.map((value, index) => Number.isFinite(value) ? index : null).filter((value) => value !== null);
+  const latestIndex = availableIndexes.at(-1) ?? 0;
   const periodIndexes = {
+    'Acumulado no ano': availableIndexes,
+    'Mês mais recente': [latestIndex],
+    'Mês anterior disponível': [Math.max(0, latestIndex - 1)],
     'Acumulado Jan–Ago': [0, 1, 2, 3, 4, 5, 6, 7],
     'Agosto (parcial)': [7],
     'Julho/2026': [6],
     'Junho/2026': [5],
   };
-  const indexes = periodIndexes[filters.period] || periodIndexes['Agosto (parcial)'];
+  const indexes = periodIndexes[filters.period] || availableIndexes;
   const sumIndexes = (values, selected) => selected.reduce((sum, index) => sum + (values[index] || 0), 0);
   let reference = null, referenceLabel = 'Sem comparação';
-  if (filters.compare === 'Mesmo período de 2025') {
+  if (filters.compare.startsWith('Mesmo período')) {
     reference = sumIndexes(previousYear, indexes);
-    referenceLabel = indexes.length > 1 ? 'Mesmo acumulado de 2025' : `Mesmo mês de 2025`;
+    referenceLabel = indexes.length > 1 ? `Mesmo acumulado de ${Number(filters.year) - 1}` : `Mesmo mês de ${Number(filters.year) - 1}`;
   } else if (filters.compare === 'Mês anterior') {
     const referenceIndexes = indexes.length > 1 ? [6] : [Math.max(0, indexes[0] - 1)];
     reference = sumIndexes(actual, referenceIndexes);
-    referenceLabel = indexes.length > 1 ? 'Julho/2026' : dashboardSpreadsheetSeries.months[referenceIndexes[0]];
+    referenceLabel = dashboardSpreadsheetSeries.months[referenceIndexes[0]];
   }
+  const targetValues = indexes.map((index) => dashboardSpreadsheetSeries.targetUsd[index]).filter(Number.isFinite);
   return {
     indexes,
     actual: sumIndexes(actual, indexes),
     reference,
     referenceLabel,
-    target: metric === 'usd' ? sumIndexes(dashboardSpreadsheetSeries.targetUsd, indexes) : null,
-    isCurrentDetail: filters.period === 'Acumulado Jan–Ago',
+    gross: sumIndexes(grossSeries, indexes),
+    reversal: sumIndexes(reversalSeries, indexes),
+    target: metric === 'usd' && targetValues.length ? targetValues.reduce((sum, value) => sum + value, 0) : null,
+    isCurrentDetail: true,
   };
 }
 
@@ -1081,6 +1093,7 @@ function dashboardActiveFilters(filters) {
     ['partNumber', 'Part Number', filters.partNumber, 'Todos'],
   ].filter(([, , value, empty]) => value !== empty);
   if (!entries.length) return '';
+  if (!entries.length) return '';
   return `<div class="active-filter-list"><span>Filtros ativos</span>${entries.map(([key, label, value]) => `<button class="filter-chip" type="button" data-action="dashboard-remove-filter" data-key="${key}"><small>${label}</small>${value}<b aria-hidden="true">×</b></button>`).join('')}</div>`;
 }
 
@@ -1097,6 +1110,7 @@ function dashboardRiskMap(rows, scale = 1) {
 
 function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimensionFactor }) {
   const periodContext = dashboardPeriodContext(filters, metric);
+  const currentYear = Number(filters.year);
   const denominatorKey = metric === 'usd' ? 'materialAmountUsd' : 'productionQty';
   const formula = metric === 'usd'
     ? 'Σ IF Cost (US$) ÷ Σ Material Amount (US$) × 100'
@@ -1118,13 +1132,13 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
   const denominatorTotal = (year, indexes, line = null) => scopedDenominators(year, indexes, line).reduce((sum, row) => sum + row[denominatorKey], 0);
 
   const currentNumerator = periodContext.actual * dimensionFactor;
-  const currentDenominator = denominatorTotal(2026, periodContext.indexes);
+  const currentDenominator = denominatorTotal(currentYear, periodContext.indexes);
   const currentRate = rate(currentNumerator, currentDenominator);
   let referenceYear = null, referenceIndexes = [], referenceDenominator = null, referenceRate = null;
-  if (filters.compare === 'Mesmo período de 2025') {
-    referenceYear = 2025; referenceIndexes = periodContext.indexes;
+  if (filters.compare.startsWith('Mesmo período')) {
+    referenceYear = currentYear - 1; referenceIndexes = periodContext.indexes;
   } else if (filters.compare === 'Mês anterior') {
-    referenceYear = 2026;
+    referenceYear = currentYear;
     referenceIndexes = periodContext.indexes.length > 1 ? [6] : [Math.max(0, periodContext.indexes[0] - 1)];
   }
   if (referenceYear !== null && periodContext.reference !== null) {
@@ -1133,20 +1147,20 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
   }
   const variation = currentRate !== null && referenceRate ? (currentRate / referenceRate - 1) * 100 : null;
 
-  const monthlyRates = metricSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(2026, [monthIndex])));
-  const monthlyPreviousRates = filters.compare === 'Mesmo período de 2025'
-    ? previousSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(2025, [monthIndex])))
+  const monthlyRates = metricSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(currentYear, [monthIndex])));
+  const monthlyPreviousRates = filters.compare.startsWith('Mesmo período') && previousSeries.some(Number.isFinite)
+    ? previousSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(currentYear - 1, [monthIndex])))
     : [];
   const visibleLines = filters.scrapLine === 'Todas' ? scrapLines : [filters.scrapLine];
   const lineRates = visibleLines.map((line) => {
     const rows = dashboardRows.filter((row) => row.scrapLine === line);
     const lineMetric = rows.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
     const numerator = fullMetric ? periodContext.actual * lineMetric / fullMetric : 0;
-    const denominator = denominatorTotal(2026, periodContext.indexes, line);
+    const denominator = denominatorTotal(currentYear, periodContext.indexes, line);
     return { label: line, numerator, denominator, value: rate(numerator, denominator) || 0, count: rows.length };
   }).sort((a, b) => b.value - a.value);
   const expectedCells = periodContext.indexes.length * (filters.product === 'Todos' ? productAreas.length : 1) * visibleLines.length;
-  const availableCells = scopedDenominators(2026, periodContext.indexes).length;
+  const availableCells = scopedDenominators(currentYear, periodContext.indexes).length;
   const coverage = expectedCells ? availableCells / expectedCells * 100 : 0;
   const worstLine = lineRates[0];
   const dimensionNote = filters.component !== 'Todos' || filters.partNumber !== 'Todos'
@@ -1156,30 +1170,29 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
   const lineDetails = lineRates.map((item) => `${item.count} registros · denominador ${denominatorText(item.denominator)}`);
   const scatterPoints = lineRates.map((item) => ({ name: item.label, value: [item.denominator, item.value], detail: `${item.count} registros no numerador` }));
 
-  return `<section class="relative-analysis"><div class="relative-intro"><article class="relative-formula"><span>Fórmula ativa · ${metric === 'usd' ? 'valor' : 'quantidade'}</span><strong>${formula}</strong><p>${dimensionNote}</p></article><article class="relative-state mock">${icon('alert')}<div><strong>Denominadores simulados para validação do protótipo</strong><p>Produção e Material Amount são mocks por mês, produto e linha. Nenhum percentual desta visão deve ser tratado como resultado industrial homologado.</p></div>${badge('MOCK','warning')}</article></div><section class="dashboard-kpi-grid">${relativeKpis}</section><section class="dashboard-grid"><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Tendência relativa · mock</span><h2>${rateLabel} por mês</h2><p class="panel-description">Taxa calculada após a soma do numerador e do denominador de cada mês.</p></div>${badge('Quanto menor, melhor','success')}</header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">2026</span>${monthlyPreviousRates.length ? '<span class="legend-key" style="--key:var(--chart-secondary)">2025</span>' : ''}</div>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:monthlyRates,previous:monthlyPreviousRates,actualLabel:'Taxa 2026',previousLabel:'Taxa 2025',unit:'percent',ariaLabel:`${rateLabel} mensal simulada`},290)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking relativo · mock</span><h2>Linhas com maior taxa</h2><p class="panel-description">Ordenação pela perda proporcional, não pelo impacto absoluto.</p></div></header>${dashboardChart({kind:'horizontal',labels:lineRates.map((item)=>item.label),values:lineRates.map((item)=>item.value),details:lineDetails,unit:'percent'},290)}</article><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Escala × perda relativa · mock</span><h2>${denominatorLabel} versus taxa</h2><p class="panel-description">Ajuda a separar linhas grandes com baixa taxa de linhas menores proporcionalmente críticas.</p></div></header>${dashboardChart({kind:'scatter',points:scatterPoints,xLabel:denominatorLabel,yLabel:rateLabel,xUnit:metric === 'usd' ? 'usd' : 'qty',yUnit:'percent',masked},290)}</article><article class="panel chart-span-4 relative-coverage"><header class="panel-header"><div><span class="panel-kicker">Qualidade do denominador</span><h2>Cobertura da simulação</h2></div>${badge(`${coverage.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`,'warning')}</header><div class="coverage-meter"><i style="width:${coverage}%"></i></div><dl class="dashboard-summary"><div><dt>Células disponíveis</dt><dd>${availableCells} de ${expectedCells}</dd></div><div><dt>Granularidade</dt><dd>Mês × produto × linha</dd></div><div><dt>Fonte atual</dt><dd>MOCK-DENOM-v1.0</dd></div><div><dt>Fonte homologada</dt><dd>Pendente</dd></div></dl><p class="summary-note">Cobertura de 100% indica apenas que o mock preenche o recorte, não que os dados foram validados.</p></article></section></section>`;
+  return `<section class="relative-analysis"><div class="relative-intro"><article class="relative-formula"><span>Fórmula ativa · ${metric === 'usd' ? 'valor' : 'quantidade'}</span><strong>${formula}</strong><p>${dimensionNote}</p></article><article class="relative-state mock">${icon('alert')}<div><strong>Denominadores simulados para validação do protótipo</strong><p>Produção e Material Amount são mocks por mês, produto e linha. Nenhum percentual desta visão deve ser tratado como resultado industrial homologado.</p></div>${badge('MOCK','warning')}</article></div><section class="dashboard-kpi-grid">${relativeKpis}</section><section class="dashboard-grid"><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Tendência relativa · mock</span><h2>${rateLabel} por mês</h2><p class="panel-description">Taxa calculada após a soma do numerador e do denominador de cada mês.</p></div>${badge('Quanto menor, melhor','success')}</header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">${currentYear}</span>${monthlyPreviousRates.length ? `<span class="legend-key" style="--key:var(--chart-secondary)">${currentYear - 1}</span>` : ''}</div>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:monthlyRates,previous:monthlyPreviousRates,actualLabel:`Taxa ${currentYear}`,previousLabel:`Taxa ${currentYear - 1}`,unit:'percent',ariaLabel:`${rateLabel} mensal simulada`},290)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking relativo · mock</span><h2>Linhas com maior taxa</h2><p class="panel-description">Ordenação pela perda proporcional, não pelo impacto absoluto.</p></div></header>${dashboardChart({kind:'horizontal',labels:lineRates.map((item)=>item.label),values:lineRates.map((item)=>item.value),details:lineDetails,unit:'percent'},290)}</article><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Escala × perda relativa · mock</span><h2>${denominatorLabel} versus taxa</h2><p class="panel-description">Ajuda a separar linhas grandes com baixa taxa de linhas menores proporcionalmente críticas.</p></div></header>${dashboardChart({kind:'scatter',points:scatterPoints,xLabel:denominatorLabel,yLabel:rateLabel,xUnit:metric === 'usd' ? 'usd' : 'qty',yUnit:'percent',masked},290)}</article><article class="panel chart-span-4 relative-coverage"><header class="panel-header"><div><span class="panel-kicker">Qualidade do denominador</span><h2>Cobertura da simulação</h2></div>${badge(`${coverage.toLocaleString('pt-BR',{maximumFractionDigits:0})}%`,'warning')}</header><div class="coverage-meter"><i style="width:${coverage}%"></i></div><dl class="dashboard-summary"><div><dt>Células disponíveis</dt><dd>${availableCells} de ${expectedCells}</dd></div><div><dt>Granularidade</dt><dd>Mês × produto × linha</dd></div><div><dt>Fonte atual</dt><dd>MOCK-DENOM-v1.0</dd></div><div><dt>Fonte homologada</dt><dd>Pendente</dd></div></dl><p class="summary-note">Cobertura de 100% indica apenas que o mock preenche o recorte, não que os dados foram validados.</p></article></section></section>`;
 }
 
 function renderDashboard() {
   const filters = state.dashboardFilters;
   const metric = state.dashboardMetric;
   const masked = state.dashboardMasked && metric === 'usd';
+  const periodContext = dashboardPeriodContext(filters, metric);
   const dashboardRows = model.transactions.filter((row) =>
+    periodContext.indexes.includes(row.monthIndex ?? 0) &&
     (filters.product === 'Todos' || row.productArea === filters.product) &&
     (filters.scrapLine === 'Todas' || row.scrapLine === filters.scrapLine) &&
     (filters.component === 'Todos' || row.component === filters.component) &&
     (filters.partNumber === 'Todos' || row.partNumber === filters.partNumber));
   const fullMetric = model.transactions.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
   const filteredMetric = dashboardRows.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
-  const dimensionFactor = fullMetric ? filteredMetric / fullMetric : 0;
-  const periodContext = dashboardPeriodContext(filters, metric);
-  const aggregateScale = fullMetric ? periodContext.actual / fullMetric : 0;
+  const dimensionFactor = window.dashboardApiConnected ? 1 : (fullMetric ? filteredMetric / fullMetric : 0);
+  const aggregateScale = window.dashboardApiConnected ? 1 : (fullMetric ? periodContext.actual / fullMetric : 0);
   state.dashboardFactor = dimensionFactor;
 
   const current = periodContext.actual * dimensionFactor;
-  // A massa demonstrativa ainda não classifica estornos. Até a regra ser homologada,
-  // bruto e líquido permanecem iguais e nenhum ajuste artificial é criado.
-  const gross = current;
-  const adjustments = 0;
+  const gross = periodContext.gross * dimensionFactor;
+  const adjustments = periodContext.reversal * dimensionFactor;
   const previous = periodContext.reference === null ? null : periodContext.reference * dimensionFactor;
   const variation = previous ? (current / previous - 1) * 100 : null;
   const target = periodContext.target === null ? null : periodContext.target * dimensionFactor;
@@ -1190,13 +1203,12 @@ function renderDashboard() {
   const monthlyActualBase = metric === 'usd' ? dashboardSpreadsheetSeries.actualUsd : dashboardSpreadsheetSeries.actualQty;
   const monthlyPreviousBase = metric === 'usd' ? dashboardSpreadsheetSeries.previousUsd : dashboardSpreadsheetSeries.previousQty;
   const monthlyActual = monthlyActualBase.map((value) => value === null ? null : value * dimensionFactor);
-  const monthlyPrevious = filters.compare === 'Mesmo período de 2025' ? monthlyPreviousBase.map((value) => value === null ? null : value * dimensionFactor) : [];
-  const monthlyTarget = metric === 'usd' ? dashboardSpreadsheetSeries.targetUsd.map((value) => value * dimensionFactor) : [];
+  const monthlyPrevious = filters.compare.startsWith('Mesmo período') && monthlyPreviousBase.some(Number.isFinite) ? monthlyPreviousBase.map((value) => value === null ? null : value * dimensionFactor) : [];
+  const monthlyTarget = metric === 'usd' && dashboardSpreadsheetSeries.targetUsd.some(Number.isFinite) ? dashboardSpreadsheetSeries.targetUsd.map((value) => value === null ? null : value * dimensionFactor) : [];
 
-  const weekly = [0, 0, 0, 0];
-  const currentMonthContext = dashboardPeriodContext({ ...filters, period: 'Agosto (parcial)' }, metric);
-  const weeklyScale = fullMetric ? currentMonthContext.actual / fullMetric : 0;
-  dashboardRows.forEach((row) => { const day = Number(row.transactionDate.slice(0, 2)); weekly[Math.min(3, Math.floor((day - 1) / 3))] += (metric === 'usd' ? row.ifCost : row.qty) * weeklyScale; });
+  const weeklyRank = dashboardAggregate(dashboardRows, 'weekLabel', metric, aggregateScale).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+  const weekly = weeklyRank.map((row) => row.value);
+  const weeklyLabels = weeklyRank.map((row) => row.label);
   const products = dashboardAggregate(dashboardRows, 'productArea', metric, aggregateScale);
   const componentsRank = dashboardAggregate(dashboardRows, 'component', metric, aggregateScale);
   const linesRank = dashboardAggregate(dashboardRows, 'scrapLine', metric, aggregateScale);
@@ -1206,17 +1218,20 @@ function renderDashboard() {
   let paretoRunning = 0;
   const paretoCumulative = partRank.map((item) => { paretoRunning += item.value; return paretoTotal ? paretoRunning / paretoTotal * 100 : 0; });
 
-  const fields = field('Ano', 'dash-year', ['2026'], filters.year)
-    + field('Período', 'dash-period', ['Acumulado Jan–Ago', 'Agosto (parcial)', 'Julho/2026', 'Junho/2026'], filters.period)
+  const availableYears = window.dashboardApiYears?.length ? window.dashboardApiYears.map(String) : ['2026'];
+  const fields = field('Ano', 'dash-year', availableYears, filters.year)
+    + field('Período', 'dash-period', ['Acumulado no ano', 'Mês mais recente', 'Mês anterior disponível'], filters.period)
     + field('Produto / área', 'dash-product', ['Todos', ...productAreas], filters.product)
     + field('Linha', 'dash-scrap-line', ['Todas', ...scrapLines], filters.scrapLine)
-    + field('Comparar com', 'dash-compare', ['Mesmo período de 2025', 'Mês anterior', 'Sem comparação'], filters.compare);
+    + field('Componente', 'dash-component', ['Todos', ...components], filters.component)
+    + field('Part Number', 'dash-part-number', ['Todos', ...partNumbers], filters.partNumber)
+    + field('Comparar com', 'dash-compare', [`Mesmo período de ${Number(filters.year) - 1}`, 'Mês anterior', 'Sem comparação'], filters.compare);
 
   const analysisBar = `<section class="dashboard-analysis-bar"><div class="segmented-control" role="group" aria-label="Tipo de análise"><button class="${state.dashboardAnalysis === 'absolute' ? 'active' : ''}" data-action="dashboard-analysis" data-id="absolute">Impacto absoluto</button><button class="${state.dashboardAnalysis === 'relative' ? 'active' : ''}" data-action="dashboard-analysis" data-id="relative">Eficiência relativa <small>mock</small></button></div><div class="analysis-controls"><div class="segmented-control metric-switch" role="group" aria-label="Unidade de análise"><button class="${metric === 'usd' ? 'active' : ''}" data-action="dashboard-metric" data-id="usd">US$</button><button class="${metric === 'qty' ? 'active' : ''}" data-action="dashboard-metric" data-id="qty">QTY SCRAP</button></div>${metric === 'usd' ? `<button class="privacy-toggle ${masked ? 'active' : ''}" type="button" data-action="dashboard-mask" aria-pressed="${masked}" title="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}">${icon(masked ? 'eyeOff' : 'eye')}<span>${masked ? 'Valores ocultos' : 'Ocultar valores'}</span></button>` : ''}</div></section>`;
 
   const kpis = metric === 'usd'
-    ? `${kpiCard('IF Cost líquido', dashboardDisplay(current, metric, masked), filters.period, '', 'Soma do IF Cost após ajustes no escopo dos filtros.')}${kpiCard('Scrap bruto', dashboardDisplay(gross, metric, masked), 'Sem estornos classificados no protótipo')}${kpiCard('Ajustes / estornos', dashboardDisplay(adjustments, metric, masked), 'Regra de estorno ainda em homologação', 'warning')}${kpiCard('Target do período', dashboardDisplay(target || 0, metric, masked), 'Planejado no início de 2026')}${kpiCard('Atingimento', achievement === null ? '—' : `${achievement.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, achievement === null ? 'Sem realizado no recorte' : 'Acima de 100% é favorável', achievement === null ? '' : achievement >= 100 ? 'success' : 'danger', 'Target ÷ realizado × 100. Como menor scrap é melhor, superar 100% significa gastar menos que o target.')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}`
-    : `${kpiCard('QTY SCRAP líquido', dashboardDisplay(current, metric), filters.period)}${kpiCard('Quantidade bruta', dashboardDisplay(gross, metric), 'Sem estornos classificados no protótipo')}${kpiCard('Ajustes', dashboardDisplay(adjustments, metric), 'Regra de estorno ainda em homologação', 'warning')}${kpiCard('Ocorrências', formatNumber(dashboardRows.length), 'Registros disponíveis para investigação')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}${kpiCard('Componente mais afetado', topComponent?.label || 'Sem dados', topComponent ? dashboardDisplay(topComponent.value, metric) : '')}`;
+    ? `${kpiCard('IF Cost líquido', dashboardDisplay(current, metric, masked), filters.period, '', 'Scrap bruto menos estornos no escopo dos filtros.')}${kpiCard('Scrap bruto', dashboardDisplay(gross, metric, masked), 'Movimentos de scrap antes dos estornos')}${kpiCard('Ajustes / estornos', dashboardDisplay(adjustments, metric, masked), 'Movimentos positivos separados pela API')}${kpiCard('Target do período', target === null ? '—' : dashboardDisplay(target, metric, masked), target === null ? 'Meta não cadastrada para este recorte' : `Meta cadastrada para ${filters.year}`)}${kpiCard('Atingimento', achievement === null ? '—' : `${achievement.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, achievement === null ? 'Sem meta ou realizado no recorte' : 'Acima de 100% é favorável', achievement === null ? '' : achievement >= 100 ? 'success' : 'danger', 'Target ÷ realizado × 100. Como menor scrap é melhor, superar 100% significa gastar menos que o target.')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}`
+    : `${kpiCard('QTY SCRAP líquido', dashboardDisplay(current, metric), filters.period)}${kpiCard('Quantidade bruta', dashboardDisplay(gross, metric), 'Movimentos de scrap antes dos estornos')}${kpiCard('Ajustes / estornos', dashboardDisplay(adjustments, metric), 'Movimentos positivos separados pela API')}${kpiCard('Ocorrências', formatNumber(dashboardRows.length), 'Registros disponíveis para investigação')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}${kpiCard('Componente mais afetado', topComponent?.label || 'Sem dados', topComponent ? dashboardDisplay(topComponent.value, metric) : '')}`;
 
   const attention = periodContext.isCurrentDetail
     ? dashboardRows.slice().sort((a, b) => (metric === 'usd' ? b.ifCost - a.ifCost : b.qty - a.qty)).slice(0, 6).map((row) => `<tr><td>${row.transactionDate.slice(0,5)}</td><td>${row.productArea}</td><td><strong>${row.scrapLine}</strong><small class="cell-stack">${row.sector} · ${row.stationCode}</small></td><td><strong>${row.partNumber}</strong><small class="cell-stack">${row.component}</small></td><td class="number">${formatNumber(row.qty)}</td><td class="number"><strong>${masked ? 'US$ •••••' : formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status === 'Justificado' ? 'Ver revisão' : 'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('')
@@ -1566,35 +1581,37 @@ const tvPanels = [
   { title: 'Visão Executiva', eyebrow: 'Material Scrap / IF Cost' },
   { title: 'Principais ofensores do período', eyebrow: 'Onde estamos perdendo dinheiro' },
   { title: 'Ocorrências prioritárias', eyebrow: 'Problemas que exigem ação' },
-  { title: '2026 × 2025', eyebrow: 'Comparativo e tendência' },
+  { title: 'Comparativo anual', eyebrow: 'Comparativo e tendência' },
 ];
 function tvKpi(label, value, detail = '', tone = '') {
   return `<article class="tv-kpi ${tone}"><span>${label}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`;
 }
-function tvHeader(panel) { return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${state.dashboardMetric === 'qty' ? panel.eyebrow.replace('IF Cost','QTY SCRAP').replace('dinheiro','unidades') : panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>${state.dashboardUpdatedAt}</strong><span>${icon('check')} Dados atualizados</span></div></header>`; }
+function tvHeader(panel) { return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${state.dashboardMetric === 'qty' ? panel.eyebrow.replace('IF Cost','QTY SCRAP').replace('dinheiro','unidades') : panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>${state.dashboardUpdatedAt}</strong><span>${icon('check')} API real · alertas/revisões: MOCK</span></div></header>`; }
 function tvPanelContent(index) {
   const panel = tvPanels[index];
   const metric = state.dashboardMetric, masked = state.dashboardMasked && metric === 'usd';
+  const year = Number(state.dashboardFilters.year), previousYear = year - 1;
   const actualSeries = metric === 'usd' ? dashboardSpreadsheetSeries.actualUsd : dashboardSpreadsheetSeries.actualQty;
   const previousSeries = metric === 'usd' ? dashboardSpreadsheetSeries.previousUsd : dashboardSpreadsheetSeries.previousQty;
-  const targetSeries = metric === 'usd' ? dashboardSpreadsheetSeries.targetUsd : [];
-  const current = actualSeries.slice(0,8).reduce((sum,value)=>sum+(value||0),0);
-  const previous = previousSeries.slice(0,8).reduce((sum,value)=>sum+(value||0),0);
+  const targetSeries = metric === 'usd' && dashboardSpreadsheetSeries.targetUsd.some(Number.isFinite) ? dashboardSpreadsheetSeries.targetUsd : [];
+  const current = actualSeries.reduce((sum,value)=>sum+(value||0),0);
+  const previous = previousSeries.reduce((sum,value)=>sum+(value||0),0);
   const variation = previous ? (current/previous-1)*100 : 0;
   const fullMetric = model.transactions.reduce((sum,row)=>sum+(metric==='usd'?row.ifCost:row.qty),0);
   const scale = fullMetric ? current/fullMetric : 0;
   const metricDisplay = (value, compact=false) => dashboardDisplay(value,metric,masked,compact);
   if (index === 0) {
     const offenders = dashboardAggregate(model.transactions,'component',metric,scale).slice(0,3);
-    const target = targetSeries.slice(0,8).reduce((sum,value)=>sum+(value||0),0);
+    const target = targetSeries.reduce((sum,value)=>sum+(value||0),0);
     const cards = metric === 'usd'
-      ? `${tvKpi('IF Cost acumulado',metricDisplay(current),'Jan–Ago/2026')}${tvKpi('Mesmo período 2025',metricDisplay(previous),'Referência YoY')}${tvKpi('Variação vs 2025',formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Target acumulado',metricDisplay(target),'Planejado no início do ano')}`
-      : `${tvKpi('QTY SCRAP acumulado',metricDisplay(current),'Jan–Ago/2026')}${tvKpi('Mesmo período 2025',metricDisplay(previous),'Referência YoY')}${tvKpi('Variação vs 2025',formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Ocorrências',formatNumber(model.transactions.length),'Registros navegáveis')}`;
-    return `${tvHeader(panel)}<div class="tv-kpi-grid">${cards}</div><div class="tv-main-grid"><article class="tv-card tv-chart-card"><h2>Evolução de ${metric==='usd'?'IF Cost':'QTY SCRAP'} — 2026 × 2025${metric==='usd'?' × Target':''}</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:'2026',previousLabel:'2025',unit:metric,masked},330)}</article><article class="tv-card"><h2>Top 3 componentes afetados</h2>${barList(offenders.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article></div><div class="tv-summary-strip"><strong>${formatNumber(dashboardSpreadsheetSeries.actualQty.slice(0,8).reduce((sum,value)=>sum+(value||0),0))}</strong> unidades de scrap <i></i><strong>${formatNumber(model.transactions.length)}</strong> transações <i></i><strong class="negative">6</strong> alertas críticos</div>`;
+      ? `${tvKpi('IF Cost acumulado',metricDisplay(current),String(year))}${tvKpi(`Mesmo período ${previousYear}`,metricDisplay(previous),'Referência YoY')}${tvKpi(`Variação vs ${previousYear}`,formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Target acumulado',targetSeries.length ? metricDisplay(target) : '—',targetSeries.length ? 'Meta cadastrada' : 'Meta indisponível')}`
+      : `${tvKpi('QTY SCRAP acumulado',metricDisplay(current),String(year))}${tvKpi(`Mesmo período ${previousYear}`,metricDisplay(previous),'Referência YoY')}${tvKpi(`Variação vs ${previousYear}`,formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Ocorrências',formatNumber(model.transactions.length),'Registros navegáveis')}`;
+    return `${tvHeader(panel)}<div class="tv-kpi-grid">${cards}</div><div class="tv-main-grid"><article class="tv-card tv-chart-card"><h2>Evolução de ${metric==='usd'?'IF Cost':'QTY SCRAP'} — ${year} × ${previousYear}${targetSeries.length?' × Target':''}</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:String(year),previousLabel:String(previousYear),unit:metric,masked},330)}</article><article class="tv-card"><h2>Top 3 componentes afetados</h2>${barList(offenders.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article></div><div class="tv-summary-strip"><strong>${formatNumber(dashboardSpreadsheetSeries.actualQty.reduce((sum,value)=>sum+(value||0),0))}</strong> unidades de scrap <i></i><strong>${formatNumber(model.transactions.length)}</strong> transações <i></i><strong class="negative">MOCK</strong> alertas críticos</div>`;
   }
   if (index === 1) { const linesRank=dashboardAggregate(model.transactions,'scrapLine',metric,scale); const partsRank=dashboardAggregate(model.transactions,'partNumber',metric,scale); const defects=dashboardAggregate(model.transactions,'defect',metric,scale).slice(0,5); return `${tvHeader(panel)}<div class="tv-offender-grid"><article class="tv-card"><h2>Pareto de defeitos por ${metric==='usd'?'IF Cost':'QTY SCRAP'}</h2>${barList(defects.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article><article class="tv-card"><h2>${metric==='usd'?'IF Cost':'QTY SCRAP'} por linha</h2>${barList(linesRank.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article></div><div class="tv-highlight-grid"><article class="tv-highlight"><span>Part Number mais crítico</span><strong>${partsRank[0]?.label||'—'}</strong><b>${metricDisplay(partsRank[0]?.value||0)}</b><small class="negative">Maior impacto acumulado</small></article><article class="tv-highlight"><span>Defeito mais crítico</span><strong>${defects[0]?.label||'—'}</strong><b>${current&&defects[0]?(defects[0].value/current*100).toLocaleString('pt-BR',{maximumFractionDigits:1}):0}%</b><small>do impacto acumulado</small></article></div>`; }
   if (index === 2) { const priorities = model.alerts.filter(a => a.severity === 'Crítico' || a.severity === 'Alto').slice(0,3); const justified=model.transactions.filter(row=>row.review.status==='Justificado').length; return `${tvHeader(panel)}<div class="tv-priority-layout"><div class="tv-priority-list">${priorities.map((a,i)=>{const related=model.transactions.filter(row=>a.transactionIds.includes(row.id));const qty=related.reduce((sum,row)=>sum+row.qty,0);return `<article class="tv-priority ${i===0?'critical':''}"><div><span>${badge(a.severity)}</span><strong>${a.partNumber}</strong></div><h2>${a.component}</h2><b>${metric==='usd'?(masked?'US$ •••••':formatCurrency(a.impact)):`${formatNumber(qty)} un.`}</b><p>${a.description}</p></article>`;}).join('')}</div><aside class="tv-card tv-analysis-status"><h2>Situação das revisões</h2><div class="tv-analysis-counts"><div><strong>${model.transactions.length-justified}</strong><span>Pendentes</span></div><div><strong>${model.transactions.filter(row=>row.review.status==='Em revisão').length}</strong><span>Em revisão</span></div><div><strong>${justified}</strong><span>Justificadas</span></div></div><h2>Categorias predominantes</h2>${barList([{label:'Material',value:42,display:'42%'},{label:'Processo',value:27,display:'27%'},{label:'Máquina',value:19,display:'19%'},{label:'Outros',value:12,display:'12%'}])}</aside></div>`; }
-  return `${tvHeader(panel)}<div class="tv-trend-layout"><article class="tv-card tv-chart-card"><h2>Evolução acumulada no ano</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:'2026',previousLabel:'2025',unit:metric,masked},430)}</article><aside class="tv-results"><h2>Resultado acumulado</h2>${tvKpi('2025',metricDisplay(previous))}${tvKpi('2026',metricDisplay(current))}${tvKpi('Variação',formatPercentage(variation),'',variation<=0?'success':'danger')}${tvKpi(metric==='usd'?'Atingimento':'Registros',metric==='usd'?`${(targetSeries.slice(0,8).reduce((sum,value)=>sum+(value||0),0)/current*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:formatNumber(model.transactions.length))}</aside></div>`;
+  const achievement = targetSeries.length && current ? `${(targetSeries.reduce((sum,value)=>sum+(value||0),0)/current*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%` : '—';
+  return `${tvHeader(panel)}<div class="tv-trend-layout"><article class="tv-card tv-chart-card"><h2>Evolução acumulada no ano</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:String(year),previousLabel:String(previousYear),unit:metric,masked},430)}</article><aside class="tv-results"><h2>Resultado acumulado</h2>${tvKpi(String(previousYear),metricDisplay(previous))}${tvKpi(String(year),metricDisplay(current))}${tvKpi('Variação',formatPercentage(variation),'',variation<=0?'success':'danger')}${tvKpi(metric==='usd'?'Atingimento':'Registros',metric==='usd'?achievement:formatNumber(model.transactions.length))}</aside></div>`;
 }
 function renderTvMode(resetProgress = true) {
   const root = $('#tv-mode'); pendingCharts = [];
@@ -1647,7 +1664,7 @@ async function handleAction(action,el){
     closeOverlay();renderPage();return showToast('Filtros adicionais aplicados.');
   }
   if(action==='refresh-dashboard'){el.classList.add('spinning');el.disabled=true;$('#sync-state').textContent='Atualizando...';await delay(600);const now=new Date(),time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});state.dashboardUpdatedAt=`${now.toLocaleDateString('pt-BR')} ${time}`;el.disabled=false;el.classList.remove('spinning');$('#sync-state').textContent=`Atualizado às ${time}`;renderPage();return showToast('Dados atualizados.');}
-  if(action==='clear-dashboard'){state.dashboardFactor=1;state.dashboardFilters={year:'2026',period:'Acumulado Jan–Ago',compare:'Mesmo período de 2025',product:'Todos',scrapLine:'Todas',component:'Todos',partNumber:'Todos'};renderPage();return showToast('Filtros limpos.');}
+  if(action==='clear-dashboard'){const year=Number(window.dashboardApiYears?.at(-1)||2026);state.dashboardFactor=1;state.dashboardFilters={year:String(year),period:'Acumulado no ano',compare:`Mesmo período de ${year-1}`,product:'Todos',scrapLine:'Todas',component:'Todos',partNumber:'Todos'};renderPage();return showToast('Filtros limpos.');}
   if(action==='dashboard-explore'){setExplorationContext({component:id,partNumber:state.dashboardFilters.partNumber==='Todos'?null:state.dashboardFilters.partNumber,scrapLine:state.dashboardFilters.scrapLine==='Todas'?null:state.dashboardFilters.scrapLine,transactionId:null,alertId:null,executionId:null},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;setExplorationContext({productArea:row.productArea,component:row.component,modelCode:row.modelCode,sector:row.sector,stationCode:row.stationCode,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-review'){const row=model.transactions.find(t=>t.id===id);if(!row)return;state.selectedScrapIds=[row.id];state.activeReviewId=row.id;state.scrapView='review';setExplorationContext({component:row.component,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(row.id)}`);return;}
@@ -1738,7 +1755,7 @@ document.addEventListener('change', (event) => {
   }
   if (target.id === 'page-size') { state.scrapPageSize = Number(target.value); state.scrapPage = 1; renderPage(); }
   if (target.matches('[data-filter^="dash-"]')) {
-    const dashboardKeys = { 'dash-year': 'year', 'dash-period': 'period', 'dash-product': 'product', 'dash-scrap-line': 'scrapLine', 'dash-compare': 'compare' };
+    const dashboardKeys = { 'dash-year': 'year', 'dash-period': 'period', 'dash-product': 'product', 'dash-scrap-line': 'scrapLine', 'dash-component': 'component', 'dash-part-number': 'partNumber', 'dash-compare': 'compare' };
     const key = dashboardKeys[target.id];
     if (key) state.dashboardFilters[key] = target.value;
     renderPage();
