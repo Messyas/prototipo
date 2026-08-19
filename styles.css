@@ -911,3 +911,17 @@ tr.selected-row td:first-child { box-shadow: inset 3px 0 0 var(--brand-primary);
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+.api-data-state {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--border-color, #dbe3eb);
+  border-radius: .75rem;
+  background: var(--surface-card, #fff);
+}
+.api-data-state strong { font-size: .82rem; }
+.api-data-state span { color: var(--text-muted, #667085); font-size: .78rem; }
+.api-data-state.connected { border-left: 4px solid #16a36a; }
+.api-data-state.loading { border-left: 4px solid #e5a000; }
+.api-data-state.error { border-left: 4px solid #d64545; }
