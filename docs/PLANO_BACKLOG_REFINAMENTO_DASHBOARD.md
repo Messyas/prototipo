@@ -120,6 +120,7 @@ Legenda: P0 = indispensável para a próxima validação; P1 = necessário para 
 | DATA-09 | P0 | S | Tratar ano corrente incompleto | Meses futuros mantêm target e resultado vazio; mês aberto é identificado como parcial; somente meses fechados entram em comparações que exigem fechamento |
 | DATA-10 | P0 | L | Integrar produção e Material Amount | Obter, por período/produto/linha, volume produzido e custo material padrão/total; validar mesma granularidade, moeda e janela do IF Cost |
 | DATA-11 | P0 | M | Calcular indicadores relativos sem misturar conceitos | `IF Cost relativo = IF Cost líquido ÷ Material Amount × 100`; `Scrap Rate quantitativo = QTY SCRAP líquido ÷ produção × 100`; numerador e denominador ficam rastreáveis |
+| DATA-12 | P0 | M | Administrar aliases dos códigos de produto | Concluído no protótipo: Administrador cria e edita o vínculo entre código recebido e produto normalizado; código original, status, autor e data são preservados; alteração vale para novas cargas e reprocessamentos sem reescrever o histórico |
 
 ### Épico B — Filtros e contexto global
 
@@ -139,7 +140,7 @@ Legenda: P0 = indispensável para a próxima validação; P1 = necessário para 
 |---|---:|---:|---|---|
 | METRIC-01 | P0 | M | Criar seletor global `US$ | Unidades` | A troca atualiza KPIs, gráficos, rankings, unidades, legendas e tooltips sem perder filtros; não coexistem gráficos duplicados apenas pela unidade |
 | METRIC-02 | P0 | M | Criar botão de olho para ocultar US$ | No modo US$, o botão mascara valores exatos em cards, eixos, rótulos, tooltips, tabelas e Modo TV; a forma relativa dos gráficos permanece visível; em unidades o botão fica oculto ou desabilitado |
-| METRIC-03 | P0 | S | Definir comportamento do target no modo unidades | Até existir target de quantidade, o gráfico informa `Target não aplicável a unidades` e não desenha uma linha monetária sobre quantidade |
+| METRIC-03 | P0 | S | Definir comportamento do target no modo unidades | Concluído no protótipo: `Target QTY` é uma meta mensal própria, configurável e versionada; nunca é convertido do target monetário. A série inicial é ilustrativa até homologação do planejamento quantitativo |
 | METRIC-04 | P1 | S | Separar privacidade visual de permissão | O olho é um recurso de apresentação, não um controle de segurança; permissão para ver/exportar US$ é definida pelo perfil do usuário |
 
 ### Épico D — Transposição dos gráficos da planilha
@@ -184,11 +185,13 @@ Legenda: P0 = indispensável para a próxima validação; P1 = necessário para 
 
 | ID | Prioridade | Tamanho | História / ação | Critérios de aceite |
 |---|---:|---:|---|---|
-| REVIEW-01 | P0 | S | Consolidar a justificativa para vários registros | Usuário seleciona N scraps, visualiza quantos serão alterados, aplica categoria/causa/ação/evidência em lote e recebe confirmação |
+| REVIEW-01 | P0 | S | Consolidar a justificativa para vários registros | Usuário seleciona N scraps, visualiza quantos serão alterados, aplica justificativa, categoria, causa e ação em lote e recebe confirmação; evidências permanecem individuais |
 | REVIEW-02 | P0 | S | Auditar individualmente a operação em lote | Cada scrap mantém evento rastreável, responsável e instante da alteração; falha parcial informa quais registros não foram atualizados |
 | REVIEW-03 | P0 | L | Estruturar a justificativa para alimentar o PPTX | Registro contempla título do problema, sintoma, linha/setor/posto, modelo, classificação 4M, 5 Porquês, causa raiz, ação imediata/corretiva/preventiva, responsável, prazo, status, custo, `QTY SCRAP` e resultado esperado |
-| REVIEW-04 | P1 | M | Registrar antes/depois e efetividade | Permite anexar imagens/documentos, informar baseline e resultado, efeito quantitativo/qualitativo, data de implementação e validação da ação |
-| REVIEW-05 | P1 | M | Transformar justificativas em plano de ação | Uma causa pode originar uma ou mais ações; ações mantêm vínculo com todos os scraps selecionados, responsável, prazo, andamento e evidências |
+| REVIEW-04 | P1 | M | Registrar antes/depois e efetividade | Concluído no protótipo: plano registra baseline e resultado atual em `QTY SCRAP` e IF Cost, redução calculada, resultado qualitativo, implementação, status e evidências simuladas |
+| REVIEW-05 | P1 | M | Transformar justificativas em plano de ação | Concluído no protótipo: causa, 5 Porquês, contenção, ações, responsável, prazo e evidências são herdados da revisão; plano mantém scraps, snapshot, produto, linha, posto, componente e origem rastreáveis |
+| REVIEW-07 | P0 | M | Criar plano mestre de ações e melhorias | Concluído no protótipo: criação permite selecionar um scrap revisado ou bruto como registro-modelo e herda contexto, impacto, snapshot e análise; visão detalhada compara antes × atual, permite editar, anexar evidência, avançar status e selecionar para o relatório mensal |
+| REVIEW-06 | P0 | S | Separar montagem do lote e revisão individual | Concluído no protótipo: configuração geral permite adicionar/remover registros e escolher a referência; formulário permanece dedicado ao registro de referência e cards ocupam toda a largura da lateral |
 
 O comportamento básico já existe no protótipo. O trabalho é refiná-lo, validar permissões e tornar o resultado da ação mais explícito.
 
@@ -214,7 +217,7 @@ Matriz inicial para o protótipo:
 | Exportar dados/PPTX | Não por padrão | Não | Sim | Sim |
 | Investigar Base de Scrap | Suporte controlado | Não | Sim | Sim |
 | Justificar scraps e gerir ações | Não por padrão | Não | Sim | Sim |
-| Configurar targets e rotina | Não | Não | Consulta | Sim |
+| Configurar targets, aliases e rotina | Não | Não | Consulta | Sim |
 | CRUD de e-mails | Não | Não | Consulta | Sim |
 | Enviar relatório por e-mail | Não | Não | Gerar/revisar | Sim |
 | Cadastrar pessoas e alterar autoridade | Sim, exclusivo | Não | Não | Não |
@@ -225,7 +228,7 @@ Matriz inicial para o protótipo:
 
 | ID | Prioridade | Tamanho | História / ação | Critérios de aceite |
 |---|---:|---:|---|---|
-| UPDATE-01 | P0 | M | Agendar a rotina completa a cada duas horas | Configurações mostram frequência, fuso de Manaus, última execução concluída e próxima prevista; a nota antiga de “duas vezes por dia” é substituída pela decisão mais recente de “a cada duas horas” |
+| UPDATE-01 | P0 | M | Agendar e editar a rotina completa | Concluído no protótipo: Administrador edita estado, frequência, horário-base, fuso, concorrência, reprocessamento e publicação de snapshot; Configurações e Execuções refletem a mesma agenda e cada alteração gera auditoria |
 | UPDATE-02 | P0 | M | Diferenciar atualização do GERP e processamento Hanaro | A fonte GERP pode mudar aproximadamente a cada cinco minutos, mas o Dashboard é republicado após a rotina Hanaro de duas horas; a interface mostra a idade do último dado efetivamente processado |
 | UPDATE-03 | P1 | M | Representar sucesso, em andamento, atraso, parcial e falha | Usuário reconhece qualidade/frescor do dado; nova tentativa não apaga o histórico; relatórios usam o último snapshot concluído |
 | UPDATE-04 | P0 | M | Oferecer disparo manual | Usuário autorizado confirma a ação; execução manual não duplica uma rotina já em andamento; no protótipo, apenas simula estados, timestamps, contagens e auditoria |
@@ -266,7 +269,7 @@ Matriz inicial para o protótipo:
 | REPORT-03 | P0 | L | Permitir curadoria humana | Analista seleciona principais problemas e melhorias, revisa narrativa, ordena casos e escolhe evidências sem editar manualmente os valores calculados |
 | REPORT-04 | P1 | XL | Gerar PPTX versionado | Em produção, gera arquivo `.pptx` editável mantendo identidade visual, layout, gráficos e imagens; no protótipo, demonstra configuração, preview e estado de geração simulada |
 | REPORT-05 | P0 | M | Criar resumo executivo mensal | Reproduz a intenção do slide 27: target × realizado, YTD equivalente, variação YoY, principais causas e melhorias, sem confundir atingimento da meta com redução anual |
-| REPORT-06 | P1 | L | Criar slides repetíveis de estudo de caso | Cada ação selecionada pode gerar slide com problema, 5 Porquês, causa raiz, antes/depois, custo ou `QTY SCRAP`, efeito e evidências |
+| REPORT-06 | P1 | L | Criar slides repetíveis de estudo de caso | Parcial no protótipo: a curadoria e o preview já recebem ações ordenadas, causa, antes/depois, resultado e evidências; a geração real do slide editável permanece para a implementação PPTX |
 | REPORT-07 | P0 | M | Versionar, aprovar e auditar | Versão registra autor, aprovador, snapshot, filtros, data/hora e seções; aprovada fica imutável e é a única elegível para envio |
 | REPORT-08 | P0 | S | Aplicar confidencialidade e permissão | Usuário comum não acessa nem exporta o PPTX; relatório com US$ exige perfil autorizado e mantém marcação de uso interno |
 | REPORT-09 | P1 | M | Incluir análise absoluta × relativa | Relatório mostra impacto absoluto, Material Amount e taxa relativa como perspectivas complementares, sem qualificar uma linha apenas pelo valor bruto |
@@ -317,7 +320,7 @@ Executar VALID-01 a VALID-04, reconciliar um período fechado com a planilha e v
 | Sinal/estorno | A planilha inverte o sinal, não aplica valor absoluto: saída negativa vira scrap positivo e entrada positiva vira ajuste negativo | Preservar a regra assinada; não usar `ABS` até decidir se ajustes/estornos reduzem o total, são excluídos ou aparecem separadamente |
 | Real Amount | A planilha mostra R$, mas o pedido de troca menciona US$ e unidades | Manter R$ fora da primeira revisão, salvo confirmação de que é KPI obrigatório |
 | Target | **Decisão fechada:** planejamento dos 12 meses no início do ano, com histórico de anos anteriores | Permitir publicação anual, transição de ciclo e alteração excepcional versionada com justificativa |
-| Target em unidades | A planilha define target monetário | Não mostrar target no modo unidades até existir meta de quantidade homologada |
+| Target em unidades | A planilha define apenas target monetário | O protótipo permite cadastrar um `Target QTY` independente mês a mês; a série inicial é ilustrativa e deve ser homologada antes de uso operacional |
 | Pareto | Notas pedem nome do item em vez de Part Number | Usar descrição normalizada no eixo e código no tooltip/detalhe |
 | Heatmap | **Formato fechado:** mapa visual semelhante ao slide 6 da Rev04, sobre o layout das linhas | Ainda falta mapear cada posto/setor aos registros e obter layouts versionados das linhas; usar `QTY SCRAP` como padrão público |
 | Scrap Rate | A base de scrap não fornece claramente o denominador de produção | Identificar fonte de produção/material consumido antes de criar o indicador |

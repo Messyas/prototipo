@@ -88,6 +88,9 @@ function applyDashboardPayload(payload) {
   replaceValues(dashboardSpreadsheetSeries.grossQty, monthlyValues(current, 'gross_scrap_qty'));
   replaceValues(dashboardSpreadsheetSeries.reversalQty, monthlyValues(current, 'reversal_qty'));
   replaceValues(dashboardSpreadsheetSeries.targetUsd, monthlyValues(current, 'target_usd'));
+  const quantityTargets = monthlyValues(current, 'target_qty');
+  if (quantityTargets.some(Number.isFinite)) replaceValues(dashboardSpreadsheetSeries.targetQty, quantityTargets);
+  if (Array.isArray(payload.relative_inputs) && payload.relative_inputs.length) window.dashboardRelativeInputs = payload.relative_inputs;
 
   replaceValues(productAreas, [...new Set([...productAreas, ...(payload.filters.product || [])])]);
   replaceValues(scrapLines, [...new Set([...scrapLines, ...(payload.filters.receipt_department || [])])]);
@@ -101,7 +104,7 @@ function applyDashboardPayload(payload) {
 
 window.dashboardApiStatusHtml = () => {
   if (dashboardApi.loading) return '<section class="api-data-state loading"><strong>Atualizando dados da API…</strong><span>Os gráficos serão redesenhados ao concluir.</span></section>';
-  if (dashboardApi.connected) return '<section class="api-data-state connected"><strong>Dados reais · FastAPI + SQLite</strong><span>Mock somente em posto/setor, workflow de revisão e análise relativa.</span></section>';
+  if (dashboardApi.connected) return '<section class="api-data-state connected"><strong>Dados reais · FastAPI + SQLite</strong><span>Dados recebidos e normalizados pelo backend.</span></section>';
   if (!dashboardApiConfig.enabled) return '<section class="api-data-state mock"><strong>Dados simulados</strong><span>Integração com o backend desativada neste protótipo.</span></section>';
   return `<section class="api-data-state error"><strong>API indisponível · exibindo o mock inicial</strong><span>${dashboardApi.error || 'Abra o protótipo por http://localhost:8000/prototype/.'}</span></section>`;
 };
