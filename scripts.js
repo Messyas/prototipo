@@ -66,7 +66,7 @@ const navigation = [
 ];
 
 const partNumbers = ['EAJ65714501', 'EAY65769201', 'EAJ66284201', 'EBR85875402', 'EBR89032104', 'EAJ65987304', 'EAJ66124008', 'EAJ65871302', 'EBR88410211', 'EBR87941306', 'EAJ66310007', 'EBR90221003', 'EAJ66048109', 'EBR89273012', 'EAJ65600418', 'EBR87145021', 'EAJ66490005', 'EBR89916010'];
-const components = ['Tela LCD', 'Placa principal PCB', 'Moldura frontal', 'Fonte de alimentação', 'Alto-falante'];
+const components = ['Module', 'PCBA', 'Tape', 'Cover', 'Chassis', 'Box', 'Packing', 'Cover Assembly', 'Base', 'Lens'];
 const organizationCodes = ['ORG-01', 'ORG-02', 'ORG-03'];
 const accounts = ['541101', '541205', '541310', '541420', '541535', '541640'];
 const accountDescriptions = ['Consumo de material', 'Ajuste de inventário', 'Requisição de retrabalho', 'Perda de processo', 'Scrap de qualidade', 'Ajuste de devolução'];
@@ -74,9 +74,13 @@ const subinventoryGroups = ['Produção', 'Qualidade', 'Retrabalho'];
 const subinventories = ['SUB-PRD-01', 'SUB-QLT-01', 'SUB-RWK-01', 'SUB-PRD-02'];
 const warehouseMarkets = ['Mercado A', 'Mercado B', 'Mercado C'];
 const receiptDepartments = ['Recebimento 01', 'Recebimento 02', 'Recebimento 03'];
-const scrapLines = ['A01', 'A02', 'A04', 'A05', 'C02'];
-const productAreas = ['TV', 'Monitor', 'AV', 'BM', 'VS', 'SMT', 'FA/MFG', 'Injeção/IPI'];
-const modelCodes = ['OLED65C4', 'OLED55B4', '32MR50C', '27UP650', 'AV-S95QR', 'BM-UR8750', 'VS-43UR78', 'SMT-MAIN'];
+const defaultScrapLines = ['A01', 'A02', 'A03', 'A04', 'A05', 'A08', 'BM1', 'BM2', 'BM3', 'BMCELL', 'C02', 'C03', 'FLEXE', 'G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07', 'G08', 'G11', 'G12', 'G13', 'G14', 'G15', 'GM01', 'INJ', 'Misp', 'Pastd', 'PCB01', 'Quale', 'RMA', 'SUB', 'TOMAM', 'TSE', 'TUTIP', 'TYANG', 'Ventin', 'Ventito'];
+const configuredScrapLines = JSON.parse(localStorage.getItem('hanaro-scrap-lines') || '[]');
+const scrapLines = [...new Set([...defaultScrapLines, ...configuredScrapLines])];
+const productAreas = ['BM', 'AV', 'MNT', 'TV', 'VS'];
+const divisions = ['BM', 'HE', 'MNT'];
+const dashboardWeeks = Array.from({ length: 53 }, (_, index) => `W${index + 1}`);
+const modelCodes = ['OLED65C4', 'OLED55B4', '32MR50C', '27UP650', 'AV-S95QR', 'BM-UR8750', 'VS-43UR78', 'SMT-MAIN', '43LR6700PSA', '75QNED73ASA'];
 const sectors = ['Packing', 'Insert Box', 'Inspection', 'Adjustment / Test', 'Final Assembly'];
 const itemDescriptions = ['Painel OLED 65 polegadas', 'Moldura frontal OLED 55', 'Placa principal Monitor 32', 'Painel LCD 27 UHD', 'Moldura frontal IVS', 'Placa principal de áudio'];
 const itemSpecs = ['OLED UHD', 'Resina ABS preta', 'PCB multicamadas', 'LCD UHD', 'Resina ABS preta', 'PCB amplificador'];
@@ -135,31 +139,40 @@ const aliases = ['D-COMMON', 'D-DIRECT', 'D-RW-REQ', 'P-REWORK', 'E-Q-SCRAP', 'Z
 function generateTransactions() {
   const rows = Array.from({ length: 96 }, (_, i) => {
     const scenario = productionScenarios[i % productionScenarios.length];
-    const day = 12 - (i % 12);
+    const year = 2026;
+    const monthIndex = i % 8;
+    const day = 1 + ((i * 3) % 28);
+    const currentDate = new Date(Date.UTC(year, monthIndex, day));
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const weekNumber = Math.ceil((((currentDate - yearStart) / 86400000) + yearStart.getUTCDay() + 1) / 7);
     const qty = i === 0 ? 14 : 2 + ((i * 7) % 39);
     const exchange = i % 11 === 2 ? null : 5.05 + (i % 8) * .017;
-    const issuePrice = i === 0 ? 2845.7 : 390 + ((i * 347) % 2900);
+    const productArea = productAreas[(i * 3 + 1) % productAreas.length];
+    const productMultiplier = { BM: 1.36, TV: 1.15, MNT: .94, AV: .82, VS: .68 }[productArea];
+    const issuePrice = (i === 0 ? 2845.7 : 390 + ((i * 347) % 2900)) * productMultiplier;
     const issueAmount = issuePrice * qty;
     return {
-      id: i === 0 ? 'TX-20260811-82194' : `TX-202608${String(day).padStart(2, '0')}-${82194 - i}`,
-      transactionDate: `${String(day).padStart(2, '0')}/08/2026`,
+      id: i === 0 ? 'TX-20260101-82194' : `TX-${year}${String(monthIndex + 1).padStart(2, '0')}${String(day).padStart(2, '0')}-${82194 - i}`,
+      occurrenceId: i === 0 ? 'OCC-20260101-82194' : `OCC-${year}${String(monthIndex + 1).padStart(2, '0')}${String(day).padStart(2, '0')}-${82194 - i}`,
+      year, monthIndex, weekNumber, weekLabel: `W${weekNumber}`,
+      transactionDate: `${String(day).padStart(2, '0')}/${String(monthIndex + 1).padStart(2, '0')}/${year}`,
       organizationCode: organizationCodes[i % organizationCodes.length],
       account: accounts[i % accounts.length], accountDescription: accountDescriptions[i % accountDescriptions.length], accountAlias: aliases[i % aliases.length],
       subinventoryGroup: subinventoryGroups[i % subinventoryGroups.length], subinventory: subinventories[i % subinventories.length],
       warehouseMarket: warehouseMarkets[i % warehouseMarkets.length], receiptDepartment: receiptDepartments[i % receiptDepartments.length],
       scrapLine: scrapLines[(i * 3 + 1) % scrapLines.length],
-      productArea: productAreas[(i * 5 + 1) % productAreas.length], modelCode: modelCodes[(i * 3 + 2) % modelCodes.length],
+      productArea, division: divisions[(i * 2 + 1) % divisions.length], modelCode: modelCodes[(i * 3 + 2) % modelCodes.length],
       sector: sectors[(i * 2 + 1) % sectors.length], stationCode: `P${String((i % 11) + 1).padStart(2, '0')}`,
       partNumber: partNumbers[i % partNumbers.length], itemDescription: itemDescriptions[i % itemDescriptions.length], itemSpec: itemSpecs[i % itemSpecs.length],
-      component: scenario.component,
+      component: components[(i * 7) % components.length],
       defect: scenario.defect, occurrence: scenario.occurrence, station: scenario.station,
       qty, issueQuantitySigned: -Math.abs(qty), issuePrice, issueAmount, exchangeRate: exchange, ifCost: exchange ? issueAmount / exchange : 0,
       movementType: 'Scrap',
       source: 'GERP',
-      executionId: i < 18 ? 'EXE-20260811-0042' : `EXE-202608${String(day).padStart(2, '0')}-${String(46 - (i % 15)).padStart(4, '0')}`,
+      executionId: i < 18 ? 'EXE-20260101-0042' : `EXE-${year}${String(monthIndex + 1).padStart(2, '0')}${String(day).padStart(2, '0')}-${String(46 - (i % 15)).padStart(4, '0')}`,
       processingStatus: !exchange ? 'Pendente' : i % 17 === 6 ? 'Rejeitado' : 'Validado',
-      batch: `BAT-202608-${String(Math.floor(i / 12) + 1).padStart(3, '0')}`,
-      processedAt: `${String(day).padStart(2, '0')}/08/2026 05:${String((i * 3) % 60).padStart(2, '0')}`,
+      batch: `BAT-${year}${String(monthIndex + 1).padStart(2, '0')}-${String(Math.floor(i / 12) + 1).padStart(3, '0')}`,
+      processedAt: `${String(day).padStart(2, '0')}/${String(monthIndex + 1).padStart(2, '0')}/${year} 05:${String((i * 3) % 60).padStart(2, '0')}`,
       review: {
         status: i > 0 && i % 13 === 0 && exchange ? 'Justificado' : 'Pendente de revisão',
         category: i > 0 && i % 13 === 0 && exchange ? scenario.category : '', reason: i > 0 && i % 13 === 0 && exchange ? scenario.occurrence : '',
@@ -174,40 +187,38 @@ function generateTransactions() {
       },
     };
   });
-  Object.assign(rows[0], { transactionDate: '11/08/2026', processedAt: '11/08/2026 05:00', exchangeRate: 5.18, issuePrice: 2845.7, issueAmount: 39839.8, ifCost: 39839.8 / 5.18 });
-  const telaRows = rows.filter((row) => row.component === 'Tela LCD');
-  telaRows.forEach((row, index) => { row.partNumber = partNumbers[index % partNumbers.length]; if (!row.exchangeRate) { row.exchangeRate = 5.12; row.processingStatus = 'Validado'; } });
+  Object.assign(rows[0], { transactionDate: '01/01/2026', processedAt: '01/01/2026 05:00', exchangeRate: 5.18, issuePrice: 2845.7, issueAmount: 39839.8, ifCost: 39839.8 / 5.18 });
+  const moduleRows = rows.filter((row) => row.component === 'Module');
+  moduleRows.forEach((row, index) => { row.partNumber = partNumbers[index % partNumbers.length]; if (!row.exchangeRate) { row.exchangeRate = 5.12; row.processingStatus = 'Validado'; } });
   const normalizeQuantity = (group, target) => {
+    if (!group.length) return;
     const original = group.reduce((sum, row) => sum + row.qty, 0);
+    if (!original) return;
     group.forEach((row) => { row.qty = Math.max(1, Math.floor(row.qty * target / original)); });
     let difference = target - group.reduce((sum, row) => sum + row.qty, 0), cursor = 0;
     while (difference > 0) { group[cursor % group.length].qty += 1; difference -= 1; cursor += 1; }
   };
-  normalizeQuantity(telaRows, 287);
-  normalizeQuantity(rows.filter((row) => row.component === 'Moldura frontal'), 360);
-  normalizeQuantity(rows.filter((row) => row.component === 'Placa principal PCB'), 330);
-  normalizeQuantity(rows.filter((row) => row.component === 'Fonte de alimentação'), 160);
-  normalizeQuantity(rows.filter((row) => row.component === 'Alto-falante'), 110);
+  const quantityTargets = { Module: 2400, PCBA: 1900, Tape: 5200, Cover: 1600, Chassis: 1200, Box: 900, Packing: 850, 'Cover Assembly': 780, Base: 650, Lens: 720 };
+  Object.entries(quantityTargets).forEach(([component, target]) => normalizeQuantity(rows.filter((row) => row.component === component), target));
   let mainQtyDifference = 14 - rows[0].qty, mainQtyCursor = 1;
   rows[0].qty = 14;
-  while (mainQtyDifference > 0) { const candidate=telaRows[mainQtyCursor % telaRows.length]; if(candidate!==rows[0]&&candidate.qty>1){candidate.qty-=1;mainQtyDifference-=1;} mainQtyCursor+=1; }
-  while (mainQtyDifference < 0) { const candidate=telaRows[mainQtyCursor % telaRows.length]; if(candidate!==rows[0]){candidate.qty+=1;mainQtyDifference+=1;} mainQtyCursor+=1; }
+  while (mainQtyDifference > 0 && moduleRows.length > 1) { const candidate=moduleRows[mainQtyCursor % moduleRows.length]; if(candidate!==rows[0]&&candidate.qty>1){candidate.qty-=1;mainQtyDifference-=1;} mainQtyCursor+=1; }
+  while (mainQtyDifference < 0 && moduleRows.length > 1) { const candidate=moduleRows[mainQtyCursor % moduleRows.length]; if(candidate!==rows[0]){candidate.qty+=1;mainQtyDifference+=1;} mainQtyCursor+=1; }
   rows.forEach((row) => { row.issueQuantitySigned = -Math.abs(row.qty); row.issueAmount = row.issuePrice * row.qty; row.ifCost = row.exchangeRate ? row.issueAmount / row.exchangeRate : 0; });
   const normalizeCost = (group, target) => {
+    if (!group.length) return;
     const current = group.reduce((sum, row) => sum + row.ifCost, 0);
+    if (!current) return;
     const factor = target / current;
     group.forEach((row) => { if (row.exchangeRate) row.issuePrice *= factor; row.issueAmount = row.issuePrice * row.qty; row.ifCost = row.exchangeRate ? row.issueAmount / row.exchangeRate : 0; });
   };
-  normalizeCost(telaRows, 72400);
-  normalizeCost(rows.filter((row) => row.component === 'Placa principal PCB'), 46000);
-  normalizeCost(rows.filter((row) => row.component === 'Moldura frontal'), 38000);
-  normalizeCost(rows.filter((row) => row.component === 'Fonte de alimentação'), 17500);
-  normalizeCost(rows.filter((row) => row.component === 'Alto-falante'), 10360);
+  const costTargets = { Module: 72400, PCBA: 61000, Tape: 54000, Cover: 43000, Chassis: 35000, Box: 27000, Packing: 22000, 'Cover Assembly': 19500, Base: 16000, Lens: 14000 };
+  Object.entries(costTargets).forEach(([component, target]) => normalizeCost(rows.filter((row) => row.component === component), target));
   rows[0].issuePrice = 8420 * rows[0].exchangeRate / rows[0].qty; rows[0].issueAmount = rows[0].issuePrice * rows[0].qty; rows[0].ifCost = 8420;
-  normalizeCost(telaRows.filter((row) => row.partNumber === 'EAJ65714501' && row !== rows[0]), 29980);
-  normalizeCost(telaRows.filter((row) => row.partNumber === 'EAY65769201'), 19100);
-  normalizeCost(telaRows.filter((row) => row.partNumber === 'EAJ66284201'), 7800);
-  normalizeCost(telaRows.filter((row) => !['EAJ65714501','EAY65769201','EAJ66284201'].includes(row.partNumber)), 7100);
+  normalizeCost(moduleRows.filter((row) => row.partNumber === 'EAJ65714501' && row !== rows[0]), 29980);
+  normalizeCost(moduleRows.filter((row) => row.partNumber === 'EAY65769201'), 19100);
+  normalizeCost(moduleRows.filter((row) => row.partNumber === 'EAJ66284201'), 7800);
+  normalizeCost(moduleRows.filter((row) => !['EAJ65714501','EAY65769201','EAJ66284201'].includes(row.partNumber)), 7100);
   Object.assign(rows[54], { organizationCode: 'ORG-01', accountAlias: 'E-Q-SCRAP', itemDescription: 'Painel OLED 65 polegadas' });
   return rows;
 }
@@ -317,15 +328,16 @@ const state = {
   locale: supportedLocales.includes(queryLocale) ? queryLocale : supportedLocales.includes(storedLocale) ? storedLocale : 'pt-BR',
   scrapPage: 1, scrapPageSize: 10, scrapSearch: '', scrapSort: { key: 'transactionDate', direction: 'desc' }, scrapListScroll: 0, pendingScrollTop: null, auditSearch: '', dashboardFactor: 1,
   dashboardMetric: queryParams.get('metric') === 'qty' ? 'qty' : 'usd', dashboardMasked: queryParams.get('masked') === '1', dashboardAnalysis: queryParams.get('analysis') === 'relative' ? 'relative' : 'absolute', dashboardUpdatedAt: '15/08/2026 10:00',
-  dashboardFilters: { year: '2026', period: 'Acumulado Jan–Ago', compare: 'Mesmo período de 2025', product: 'Todos', scrapLine: 'Todas', component: 'Todos', partNumber: 'Todos' },
-  scrapFilters: { date: 'Todas as datas', productArea: 'Todos', scrapLine: 'Todas', movementType: 'Todos', processingStatus: 'Todos', reviewStatus: 'Todos' },
-  scrapAdvancedFilters: { organizationCode: 'Todas', accountAlias: 'Todos', subinventoryGroup: 'Todos', subinventory: 'Todos', warehouseMarket: 'Todos', receiptDepartment: 'Todos', component: 'Todos', modelCode: 'Todos', sector: 'Todos', stationCode: 'Todos', partNumber: 'Todos', reportInclusion: 'Todos' },
+  dashboardFilters: { year: '2026', period: 'Acumulado no ano', product: [], scrapLine: [], division: [], week: [], component: 'Todos', partNumber: 'Todos' },
+  scrapFilters: { date: 'Todas as datas', productArea: 'Todos', division: 'Todas', scrapLine: 'Todas', component: 'Todos', modelCode: 'Todos', reviewStatus: 'Todos' },
+  scrapAdvancedFilters: { organizationCode: 'Todas', accountAlias: 'Todos', subinventoryGroup: 'Todos', subinventory: 'Todos', warehouseMarket: 'Todos', receiptDepartment: 'Todos', sector: 'Todos', stationCode: 'Todos', partNumber: 'Todos', processingStatus: 'Todos', reportInclusion: 'Todos' },
   alertFilters: { period: 'Últimos 7 dias', severity: 'Todas', type: 'Todos', productArea: 'Todos', scrapLine: 'Todas', status: 'Todos', channel: 'Todos' },
   executionStatus: 'Todos', executionFilters:{period:'Hoje',source:'Todas',trigger:'Todos'}, auditEntity: 'Todas', auditFilters:{period:'Hoje',actor:'Todos',origin:'Todos',severity:'Todas'},
   componentSearch: '', componentFilters: { productArea: 'Todos', division: 'Todas', itemType: 'Todos', status: 'Todos' },
   actionView: 'list', actionFilters: { period: 'Agosto/2026', productArea: 'Todos', scrapLine: 'Todas', owner: 'Todos', category4m: 'Todos', risk: 'Todos', status: 'Todos', overdue: 'Todos' },
   scrapView: initialRouteParts[1] === 'revisar' ? 'review' : 'list', selectedScrapIds: initialReviewId ? [initialReviewId] : [], activeReviewId: initialReviewId,
-  tvActive: false, tvPanel: 0, tvPaused: false, tvRotation: true, tvDuration: 15,
+  reviewStep: 1, reviewSelectionSearch: '', reviewSelectionStatus: 'Todos', reviewApplyAll: true,
+  tvActive: false, tvView: 'executive', tvFactoryPeriod: 'month', tvPanel: 0, tvPaused: false, tvRotation: true, tvDuration: 15,
   context: { source: null, productArea: null, component: null, modelCode: null, sector: null, stationCode: null, partNumber: null, scrapLine: null, transactionId: null, alertId: null, executionId: null },
 };
 let tvTimer = null;
@@ -779,11 +791,74 @@ function field(label, id, options, value = '') {
   const optionLabels = { 'Acumulado 2026 vs 2025': 'Acumulado 2026 × PY', 'Mesmo período 2025': 'Mesmo período PY' };
   return `<div class="field"><label for="${id}">${label}</label><select class="control" id="${id}" data-filter="${id}">${options.map((o) => `<option value="${o}" ${o === value ? 'selected' : ''}>${optionLabels[o] || o}</option>`).join('')}</select></div>`;
 }
+function dashboardFilterValues(value, emptyValue = 'Todos') {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value && value !== emptyValue ? [value] : [];
+}
+function dashboardFilterMatches(actualValue, selected, emptyValue = 'Todos') {
+  const values = dashboardFilterValues(selected, emptyValue);
+  return !values.length || values.includes(actualValue);
+}
+function dashboardSingleFilterValue(selected, emptyValue = 'Todos') {
+  const values = dashboardFilterValues(selected, emptyValue);
+  return values.length === 1 ? values[0] : null;
+}
+function transactionYear(row) {
+  return Number(row.year) || Number(String(row.transactionDate || '').slice(-4)) || null;
+}
+const monthNamesPt = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function transactionDateValue(row) {
+  const [day, month, year] = String(row.transactionDate || '').split('/').map(Number);
+  return day && month && year ? Date.UTC(year, month - 1, day) : Number.NaN;
+}
+function transactionPeriodLabel(row) {
+  const [month, year] = [Number(row.monthIndex) + 1 || Number(String(row.transactionDate || '').slice(3, 5)), transactionYear(row)];
+  return month >= 1 && month <= 12 && year ? `${monthNamesPt[month - 1]}/${year}` : 'Não informado';
+}
+function scrapPeriodMatches(row, selected) {
+  if (selected === 'Todas as datas') return true;
+  if (selected === 'Últimos 7 dias') {
+    const latest = Math.max(...model.transactions.map(transactionDateValue).filter(Number.isFinite));
+    const current = transactionDateValue(row);
+    return Number.isFinite(current) && Number.isFinite(latest) && current >= latest - (6 * 86400000) && current <= latest;
+  }
+  return transactionPeriodLabel(row) === selected;
+}
+function dashboardWeek(row) {
+  const parsed = Number(row.weekNumber) || Number(String(row.weekLabel || '').match(/\d+/)?.[0]);
+  return Number.isFinite(parsed) && parsed > 0 ? `W${parsed}` : 'Não informado';
+}
+function dashboardRowMatchesDimensions(row, filters, skipKey = '') {
+  return (skipKey === 'product' || dashboardFilterMatches(row.productArea, filters.product)) &&
+    (skipKey === 'scrapLine' || dashboardFilterMatches(row.scrapLine, filters.scrapLine, 'Todas')) &&
+    (skipKey === 'division' || dashboardFilterMatches(row.division, filters.division, 'Todos')) &&
+    (skipKey === 'week' || dashboardFilterMatches(dashboardWeek(row), filters.week, 'Todas')) &&
+    (skipKey === 'component' || filters.component === 'Todos' || row.component === filters.component) &&
+    (skipKey === 'partNumber' || filters.partNumber === 'Todos' || row.partNumber === filters.partNumber);
+}
+function dashboardAvailableDimensionValues(rows, filters, filterKey, rowKey) {
+  return new Set(rows.filter((row) => dashboardRowMatchesDimensions(row, filters, filterKey)).map((row) => row[rowKey]).filter(Boolean));
+}
+function dashboardMultiField(label, key, options, value, availableValues = null) {
+  const allLabel = key === 'scrapLine' ? 'Todas' : 'Todos';
+  const selected = dashboardFilterValues(value, allLabel);
+  const summary = !selected.length ? allLabel : selected.length === 1 ? selected[0] : `${selected.length} selecionados`;
+  const optionRows = options.map((option) => {
+    const checked = selected.includes(option);
+    const unavailable = availableValues && !availableValues.has(option);
+    return `<label class="dashboard-multi-option ${unavailable ? 'unavailable' : ''}"><input type="checkbox" value="${option}" ${checked ? 'checked' : ''} ${unavailable && !checked ? 'disabled' : ''}><span>${option}</span>${unavailable ? '<small>Sem combinação</small>' : ''}</label>`;
+  }).join('');
+  return `<div class="field dashboard-multi-field"><label>${label}</label><details class="dashboard-multi" data-dashboard-filter="${key}"><summary class="control" aria-label="${label}: ${summary}"><span>${summary}</span>${icon('chevronRight')}</summary><div class="dashboard-multi-menu"><div class="dashboard-multi-options">${optionRows || '<span class="dashboard-multi-empty">Sem opções</span>'}</div><footer><button class="link-button" type="button" data-action="dashboard-multi-clear" data-id="${key}">${allLabel}</button>${button('Aplicar','dashboard-multi-apply',{small:true,primary:true,id:key})}</footer></div></details></div>`;
+}
 function kpiCard(label, value, detail = '', tone = '', help = '') {
   const helper = help ? `<span class="metric-help kpi-help" tabindex="0" role="button" aria-label="Entenda esta métrica"><b aria-hidden="true">!</b><span class="metric-tooltip" role="tooltip"><strong>Como avaliar esta métrica?</strong>${help}</span></span>` : '';
   return `<article class="kpi-card ${tone} ${help ? 'has-help' : ''}">${helper}<span class="kpi-label">${label}</span><strong class="kpi-value">${value}</strong>${detail ? `<span class="kpi-detail">${detail}</span>` : ''}</article>`;
 }
 function filtersPanel(fields, footer = '') { return `<section class="filter-panel" aria-label="Filtros"><div class="filters">${fields}</div>${footer ? `<div class="filter-footer">${footer}</div>` : ''}</section>`; }
+function metricDisplayBar(label, metric, masked) {
+  const qtyActive = metric === 'qty';
+  return `<section class="dashboard-analysis-bar dashboard-display-bar screen-display-bar"><strong class="screen-display-label">${label}</strong><div class="analysis-controls">${metric === 'usd' ? `<button class="privacy-toggle privacy-icon-button ${masked ? 'active' : ''}" type="button" data-action="dashboard-mask" aria-pressed="${masked}" aria-label="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}" title="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}">${icon(masked ? 'eyeOff' : 'eye')}</button>` : ''}<div class="dashboard-switch-control dashboard-unit-switch"><span>${qtyActive ? 'QTY SCRAP' : 'US$'}</span><button class="toggle-switch ${qtyActive ? 'active' : ''}" type="button" data-action="dashboard-metric" data-id="${qtyActive ? 'usd' : 'qty'}" role="switch" aria-checked="${qtyActive}" aria-label="Alternar unidade de análise"><i></i></button></div></div></section>`;
+}
 function tablePanel(title, headers, rows, options = {}) {
   return `<section class="table-panel">${title ? `<header class="panel-header"><h2>${title}</h2>${options.headerAction || ''}</header>` : ''}<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th class="${h.number ? 'number' : ''}">${h.label}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}"><div class="empty-state">Nenhum registro encontrado.</div></td></tr>`}</tbody></table></div>${options.pagination || ''}</section>`;
 }
@@ -837,8 +912,8 @@ function wireDashboardChartDrill(instance, data, element) {
     if (!params.name) return;
     const filters = state.dashboardFilters;
     const next = {
-      productArea: filters.product === 'Todos' ? null : filters.product,
-      scrapLine: filters.scrapLine === 'Todas' ? null : filters.scrapLine,
+      productArea: dashboardSingleFilterValue(filters.product),
+      scrapLine: dashboardSingleFilterValue(filters.scrapLine, 'Todas'),
       component: filters.component === 'Todos' ? null : filters.component,
       partNumber: filters.partNumber === 'Todos' ? null : filters.partNumber,
       modelCode: null, sector: null, stationCode: null, transactionId: null, alertId: null, executionId: null,
@@ -1037,6 +1112,7 @@ function dashboardPeriodContext(filters, metric) {
   const reversalSeries = metric === 'usd' ? dashboardSpreadsheetSeries.reversalUsd : dashboardSpreadsheetSeries.reversalQty;
   const availableIndexes = actual.map((value, index) => Number.isFinite(value) ? index : null).filter((value) => value !== null);
   const latestIndex = availableIndexes.at(-1) ?? 0;
+  const requestedMonthIndex = dashboardSpreadsheetSeries.months.indexOf(filters.period);
   const periodIndexes = {
     'Acumulado no ano': availableIndexes,
     'Mês mais recente': [latestIndex],
@@ -1046,14 +1122,15 @@ function dashboardPeriodContext(filters, metric) {
     'Julho/2026': [6],
     'Junho/2026': [5],
   };
-  const indexes = periodIndexes[filters.period] || availableIndexes;
+  const indexes = requestedMonthIndex >= 0 ? [requestedMonthIndex] : (periodIndexes[filters.period] || availableIndexes);
   const sumIndexes = (values, selected) => selected.reduce((sum, index) => sum + (values[index] || 0), 0);
-  let reference = null, referenceLabel = 'Sem comparação';
-  if (filters.compare.startsWith('Mesmo período')) {
+  let reference = null, referenceLabel = 'Sem comparação', referenceIndexes = [];
+  if (filters.period === 'Acumulado no ano') {
     reference = sumIndexes(previousYear, indexes);
     referenceLabel = indexes.length > 1 ? `Mesmo acumulado de ${Number(filters.year) - 1}` : `Mesmo mês de ${Number(filters.year) - 1}`;
-  } else if (filters.compare === 'Mês anterior') {
-    const referenceIndexes = indexes.length > 1 ? [6] : [Math.max(0, indexes[0] - 1)];
+    referenceIndexes = indexes;
+  } else if (indexes.length === 1 && indexes[0] > 0) {
+    referenceIndexes = [indexes[0] - 1];
     reference = sumIndexes(actual, referenceIndexes);
     referenceLabel = dashboardSpreadsheetSeries.months[referenceIndexes[0]];
   }
@@ -1063,6 +1140,7 @@ function dashboardPeriodContext(filters, metric) {
     actual: sumIndexes(actual, indexes),
     reference,
     referenceLabel,
+    referenceIndexes,
     gross: sumIndexes(grossSeries, indexes),
     reversal: sumIndexes(reversalSeries, indexes),
     target: metric === 'usd' && targetValues.length ? targetValues.reduce((sum, value) => sum + value, 0) : null,
@@ -1087,14 +1165,15 @@ function dashboardDisplay(value, metric, masked = false, compact = false) {
 
 function dashboardActiveFilters(filters) {
   const entries = [
-    ['product', 'Produto', filters.product, 'Todos'],
-    ['scrapLine', 'Linha', filters.scrapLine, 'Todas'],
-    ['component', 'Componente', filters.component, 'Todos'],
-    ['partNumber', 'Part Number', filters.partNumber, 'Todos'],
-  ].filter(([, , value, empty]) => value !== empty);
+    ['product', 'Produto', dashboardFilterValues(filters.product)],
+    ['scrapLine', 'Linha', dashboardFilterValues(filters.scrapLine, 'Todas')],
+    ['division', 'Divisão', dashboardFilterValues(filters.division)],
+    ['week', 'Semana', dashboardFilterValues(filters.week, 'Todas')],
+    ['component', 'Componente', filters.component === 'Todos' ? [] : [filters.component]],
+    ['partNumber', 'Part Number', filters.partNumber === 'Todos' ? [] : [filters.partNumber]],
+  ].filter(([, , values]) => values.length);
   if (!entries.length) return '';
-  if (!entries.length) return '';
-  return `<div class="active-filter-list"><span>Filtros ativos</span>${entries.map(([key, label, value]) => `<button class="filter-chip" type="button" data-action="dashboard-remove-filter" data-key="${key}"><small>${label}</small>${value}<b aria-hidden="true">×</b></button>`).join('')}</div>`;
+  return `<div class="active-filter-list"><span>Filtros ativos</span>${entries.map(([key, label, values]) => `<button class="filter-chip" type="button" data-action="dashboard-remove-filter" data-key="${key}"><small>${label}</small>${values.length > 2 ? `${values.length} selecionados` : values.join(', ')}<b aria-hidden="true">×</b></button>`).join('')}</div>`;
 }
 
 function dashboardRiskMap(rows, scale = 1) {
@@ -1105,12 +1184,14 @@ function dashboardRiskMap(rows, scale = 1) {
   }, new Map()).values()].sort((a, b) => b.qty - a.qty);
   const max = Math.max(1, ...stations.map((item) => item.qty));
   const byLine = scrapLines.map((line) => ({ line, stations: stations.filter((item) => item.line === line).slice(0, 8) }));
-  return `<div class="risk-map" role="img" aria-label="Mapa de risco por linha e posto baseado em QTY SCRAP">${byLine.map((group) => `<div class="risk-line"><strong>${group.line}</strong><div class="risk-track">${group.stations.length ? group.stations.map((item) => { const ratio = item.qty / max; const level = ratio >= .66 ? 'critical' : ratio >= .34 ? 'moderate' : 'low'; return `<button class="risk-station ${level}" type="button" data-action="dashboard-risk-explore" data-id="${item.line}" data-sector="${item.sector}" data-station="${item.station}" title="${item.sector} · ${item.station}: ${formatNumber(item.qty)} unidades"><b>${item.station}</b><small>${item.sector}</small><span>${formatNumber(item.qty)} un.</span></button>`; }).join('') : '<span class="risk-empty">Sem ocorrências no recorte</span>'}</div></div>`).join('')}</div>`;
+  return `<div class="risk-map" role="img" aria-label="Mapa de risco por linha e posto baseado em QTY SCRAP">${byLine.map((group) => `<div class="risk-line"><strong>${group.line}</strong><div class="risk-track">${group.stations.length ? group.stations.map((item) => { const ratio = item.qty / max; const level = ratio >= .66 ? 'critical' : ratio >= .34 ? 'moderate' : 'low'; return `<button class="risk-station ${level}" type="button" data-action="dashboard-risk-explore" data-id="${item.line}" data-sector="${item.sector}" data-station="${item.station}" title="${item.sector} · ${item.station}: ${formatNumber(item.qty)} unidades"><b>${item.station}</b><small>${item.sector}</small><span>${formatNumber(item.qty)} un.</span></button>`; }).join('') : '<span class="risk-empty">Sem registros no recorte</span>'}</div></div>`).join('')}</div>`;
 }
 
 function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimensionFactor }) {
   const periodContext = dashboardPeriodContext(filters, metric);
   const currentYear = Number(filters.year);
+  const selectedProducts = dashboardFilterValues(filters.product);
+  const selectedLines = dashboardFilterValues(filters.scrapLine, 'Todas');
   const denominatorKey = metric === 'usd' ? 'materialAmountUsd' : 'productionQty';
   const formula = metric === 'usd'
     ? 'Σ IF Cost (US$) ÷ Σ Material Amount (US$) × 100'
@@ -1127,19 +1208,17 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
     : `${formatNumber(Math.round(value))} un.`;
   const scopedDenominators = (year, indexes, line = null) => relativeDenominatorMock.filter((row) =>
     row.year === year && indexes.includes(row.monthIndex) &&
-    (filters.product === 'Todos' || row.productArea === filters.product) &&
-    (line ? row.scrapLine === line : filters.scrapLine === 'Todas' || row.scrapLine === filters.scrapLine));
+    (!selectedProducts.length || selectedProducts.includes(row.productArea)) &&
+    (line ? row.scrapLine === line : !selectedLines.length || selectedLines.includes(row.scrapLine)));
   const denominatorTotal = (year, indexes, line = null) => scopedDenominators(year, indexes, line).reduce((sum, row) => sum + row[denominatorKey], 0);
 
   const currentNumerator = periodContext.actual * dimensionFactor;
   const currentDenominator = denominatorTotal(currentYear, periodContext.indexes);
   const currentRate = rate(currentNumerator, currentDenominator);
   let referenceYear = null, referenceIndexes = [], referenceDenominator = null, referenceRate = null;
-  if (filters.compare.startsWith('Mesmo período')) {
-    referenceYear = currentYear - 1; referenceIndexes = periodContext.indexes;
-  } else if (filters.compare === 'Mês anterior') {
-    referenceYear = currentYear;
-    referenceIndexes = periodContext.indexes.length > 1 ? [6] : [Math.max(0, periodContext.indexes[0] - 1)];
+  if (periodContext.reference !== null) {
+    referenceYear = filters.period === 'Acumulado no ano' ? currentYear - 1 : currentYear;
+    referenceIndexes = periodContext.referenceIndexes;
   }
   if (referenceYear !== null && periodContext.reference !== null) {
     referenceDenominator = denominatorTotal(referenceYear, referenceIndexes);
@@ -1148,10 +1227,10 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
   const variation = currentRate !== null && referenceRate ? (currentRate / referenceRate - 1) * 100 : null;
 
   const monthlyRates = metricSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(currentYear, [monthIndex])));
-  const monthlyPreviousRates = filters.compare.startsWith('Mesmo período') && previousSeries.some(Number.isFinite)
+  const monthlyPreviousRates = filters.period === 'Acumulado no ano' && previousSeries.some(Number.isFinite)
     ? previousSeries.map((value, monthIndex) => value === null ? null : rate(value * dimensionFactor, denominatorTotal(currentYear - 1, [monthIndex])))
     : [];
-  const visibleLines = filters.scrapLine === 'Todas' ? scrapLines : [filters.scrapLine];
+  const visibleLines = selectedLines.length ? selectedLines : scrapLines;
   const lineRates = visibleLines.map((line) => {
     const rows = dashboardRows.filter((row) => row.scrapLine === line);
     const lineMetric = rows.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
@@ -1159,12 +1238,12 @@ function renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimen
     const denominator = denominatorTotal(currentYear, periodContext.indexes, line);
     return { label: line, numerator, denominator, value: rate(numerator, denominator) || 0, count: rows.length };
   }).sort((a, b) => b.value - a.value);
-  const expectedCells = periodContext.indexes.length * (filters.product === 'Todos' ? productAreas.length : 1) * visibleLines.length;
+  const expectedCells = periodContext.indexes.length * (selectedProducts.length || productAreas.length) * visibleLines.length;
   const availableCells = scopedDenominators(currentYear, periodContext.indexes).length;
   const coverage = expectedCells ? availableCells / expectedCells * 100 : 0;
   const worstLine = lineRates[0];
-  const dimensionNote = filters.component !== 'Todos' || filters.partNumber !== 'Todos'
-    ? 'Componente e Part Number reduzem o numerador; o denominador permanece na produção do produto e da linha selecionados.'
+  const dimensionNote = filters.component !== 'Todos'
+    ? 'Componente reduz o numerador; o denominador permanece na produção do produto e da linha selecionados.'
     : 'Numerador e denominador usam o mesmo recorte de período, produto e linha.';
   const relativeKpis = `${kpiCard(rateLabel, rateText(currentRate), 'Quanto menor, melhor', currentRate !== null && referenceRate !== null && currentRate <= referenceRate ? 'success' : '')}${kpiCard(metric === 'usd' ? 'IF Cost do recorte' : 'QTY SCRAP do recorte', dashboardDisplay(currentNumerator, metric, masked), filters.period)}${kpiCard(`${denominatorLabel} · mock`, denominatorText(currentDenominator), 'Fonte MOCK-DENOM-v1.0')}${kpiCard('Referência relativa', rateText(referenceRate), periodContext.referenceLabel)}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), 'Negativo é favorável', variation === null ? '' : variation <= 0 ? 'success' : 'danger')}${kpiCard('Linha com maior taxa', worstLine?.label || '—', worstLine ? rateText(worstLine.value) : 'Sem dados')}`;
   const lineDetails = lineRates.map((item) => `${item.count} registros · denominador ${denominatorText(item.denominator)}`);
@@ -1178,12 +1257,12 @@ function renderDashboard() {
   const metric = state.dashboardMetric;
   const masked = state.dashboardMasked && metric === 'usd';
   const periodContext = dashboardPeriodContext(filters, metric);
-  const dashboardRows = model.transactions.filter((row) =>
-    periodContext.indexes.includes(row.monthIndex ?? 0) &&
-    (filters.product === 'Todos' || row.productArea === filters.product) &&
-    (filters.scrapLine === 'Todas' || row.scrapLine === filters.scrapLine) &&
-    (filters.component === 'Todos' || row.component === filters.component) &&
-    (filters.partNumber === 'Todos' || row.partNumber === filters.partNumber));
+  const dashboardBaseRows = model.transactions.filter((row) => transactionYear(row) === Number(filters.year) && periodContext.indexes.includes(row.monthIndex ?? 0));
+  const dashboardRows = dashboardBaseRows.filter((row) => dashboardRowMatchesDimensions(row, filters));
+  const availableProducts = dashboardAvailableDimensionValues(dashboardBaseRows, filters, 'product', 'productArea');
+  const availableLines = dashboardAvailableDimensionValues(dashboardBaseRows, filters, 'scrapLine', 'scrapLine');
+  const availableDivisions = dashboardAvailableDimensionValues(dashboardBaseRows, filters, 'division', 'division');
+  const availableWeeks = new Set(dashboardBaseRows.filter((row) => dashboardRowMatchesDimensions(row, filters, 'week')).map(dashboardWeek));
   const fullMetric = model.transactions.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
   const filteredMetric = dashboardRows.reduce((sum, row) => sum + (metric === 'usd' ? row.ifCost : row.qty), 0);
   const dimensionFactor = window.dashboardApiConnected ? 1 : (fullMetric ? filteredMetric / fullMetric : 0);
@@ -1192,7 +1271,6 @@ function renderDashboard() {
 
   const current = periodContext.actual * dimensionFactor;
   const gross = periodContext.gross * dimensionFactor;
-  const adjustments = periodContext.reversal * dimensionFactor;
   const previous = periodContext.reference === null ? null : periodContext.reference * dimensionFactor;
   const variation = previous ? (current / previous - 1) * 100 : null;
   const target = periodContext.target === null ? null : periodContext.target * dimensionFactor;
@@ -1203,44 +1281,68 @@ function renderDashboard() {
   const monthlyActualBase = metric === 'usd' ? dashboardSpreadsheetSeries.actualUsd : dashboardSpreadsheetSeries.actualQty;
   const monthlyPreviousBase = metric === 'usd' ? dashboardSpreadsheetSeries.previousUsd : dashboardSpreadsheetSeries.previousQty;
   const monthlyActual = monthlyActualBase.map((value) => value === null ? null : value * dimensionFactor);
-  const monthlyPrevious = filters.compare.startsWith('Mesmo período') && monthlyPreviousBase.some(Number.isFinite) ? monthlyPreviousBase.map((value) => value === null ? null : value * dimensionFactor) : [];
+  const monthlyPrevious = filters.period === 'Acumulado no ano' && monthlyPreviousBase.some(Number.isFinite) ? monthlyPreviousBase.map((value) => value === null ? null : value * dimensionFactor) : [];
   const monthlyTarget = metric === 'usd' && dashboardSpreadsheetSeries.targetUsd.some(Number.isFinite) ? dashboardSpreadsheetSeries.targetUsd.map((value) => value === null ? null : value * dimensionFactor) : [];
 
-  const weeklyRank = dashboardAggregate(dashboardRows, 'weekLabel', metric, aggregateScale).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+  const weeklyRank = dashboardAggregate(dashboardRows.map((row) => ({ ...row, dashboardWeek: dashboardWeek(row) })), 'dashboardWeek', metric, aggregateScale).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
   const weekly = weeklyRank.map((row) => row.value);
   const weeklyLabels = weeklyRank.map((row) => row.label);
   const products = dashboardAggregate(dashboardRows, 'productArea', metric, aggregateScale);
   const componentsRank = dashboardAggregate(dashboardRows, 'component', metric, aggregateScale);
   const linesRank = dashboardAggregate(dashboardRows, 'scrapLine', metric, aggregateScale);
-  const modelsRank = dashboardAggregate(dashboardRows, 'modelCode', metric, aggregateScale).slice(0, 6);
-  const partRank = dashboardAggregate(dashboardRows, 'partNumber', metric, aggregateScale).slice(0, 8);
-  const paretoTotal = partRank.reduce((sum, item) => sum + item.value, 0);
-  let paretoRunning = 0;
-  const paretoCumulative = partRank.map((item) => { paretoRunning += item.value; return paretoTotal ? paretoRunning / paretoTotal * 100 : 0; });
-
+  const modelsRank = dashboardAggregate(dashboardRows, 'modelCode', metric, aggregateScale).slice(0, 10);
+  const topOffenders = componentsRank.slice(0, 5);
+  const componentTotal = componentsRank.reduce((sum, item) => sum + item.value, 0);
   const availableYears = window.dashboardApiYears?.length ? window.dashboardApiYears.map(String) : ['2026'];
+  const periodOptions = ['Acumulado no ano', ...dashboardSpreadsheetSeries.months.filter((month, index) => Number.isFinite(monthlyActualBase[index]))];
   const fields = field('Ano', 'dash-year', availableYears, filters.year)
-    + field('Período', 'dash-period', ['Acumulado no ano', 'Mês mais recente', 'Mês anterior disponível'], filters.period)
-    + field('Produto / área', 'dash-product', ['Todos', ...productAreas], filters.product)
-    + field('Linha', 'dash-scrap-line', ['Todas', ...scrapLines], filters.scrapLine)
-    + field('Componente', 'dash-component', ['Todos', ...components], filters.component)
-    + field('Part Number', 'dash-part-number', ['Todos', ...partNumbers], filters.partNumber)
-    + field('Comparar com', 'dash-compare', [`Mesmo período de ${Number(filters.year) - 1}`, 'Mês anterior', 'Sem comparação'], filters.compare);
+    + field('Período', 'dash-period', periodOptions, filters.period)
+    + dashboardMultiField('Produto', 'product', productAreas, filters.product, availableProducts)
+    + dashboardMultiField('Linha', 'scrapLine', scrapLines, filters.scrapLine, availableLines)
+    + dashboardMultiField('Divisão', 'division', divisions, filters.division, availableDivisions)
+    + dashboardMultiField('Semana', 'week', dashboardWeeks, filters.week, availableWeeks)
+    + field('Componente', 'dash-component', ['Todos', ...components], filters.component);
 
-  const analysisBar = `<section class="dashboard-analysis-bar"><div class="segmented-control" role="group" aria-label="Tipo de análise"><button class="${state.dashboardAnalysis === 'absolute' ? 'active' : ''}" data-action="dashboard-analysis" data-id="absolute">Impacto absoluto</button><button class="${state.dashboardAnalysis === 'relative' ? 'active' : ''}" data-action="dashboard-analysis" data-id="relative">Eficiência relativa <small>mock</small></button></div><div class="analysis-controls"><div class="segmented-control metric-switch" role="group" aria-label="Unidade de análise"><button class="${metric === 'usd' ? 'active' : ''}" data-action="dashboard-metric" data-id="usd">US$</button><button class="${metric === 'qty' ? 'active' : ''}" data-action="dashboard-metric" data-id="qty">QTY SCRAP</button></div>${metric === 'usd' ? `<button class="privacy-toggle ${masked ? 'active' : ''}" type="button" data-action="dashboard-mask" aria-pressed="${masked}" title="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}">${icon(masked ? 'eyeOff' : 'eye')}<span>${masked ? 'Valores ocultos' : 'Ocultar valores'}</span></button>` : ''}</div></section>`;
+  const relativeActive = state.dashboardAnalysis === 'relative';
+  const qtyActive = metric === 'qty';
+  const analysisBar = `<section class="dashboard-analysis-bar dashboard-display-bar"><div class="dashboard-switch-control"><button class="toggle-switch ${relativeActive ? 'active' : ''}" type="button" data-action="dashboard-analysis" data-id="${relativeActive ? 'absolute' : 'relative'}" role="switch" aria-checked="${relativeActive}" aria-label="Alternar tipo de análise"><i></i></button><span>${relativeActive ? 'Eficiência relativa <small>mock</small>' : 'Impacto absoluto'}</span></div><div class="analysis-controls">${metric === 'usd' ? `<button class="privacy-toggle privacy-icon-button ${masked ? 'active' : ''}" type="button" data-action="dashboard-mask" aria-pressed="${masked}" aria-label="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}" title="${masked ? 'Exibir valores monetários' : 'Ocultar valores monetários'}">${icon(masked ? 'eyeOff' : 'eye')}</button>` : ''}<div class="dashboard-switch-control dashboard-unit-switch"><span>${qtyActive ? 'QTY SCRAP' : 'US$'}</span><button class="toggle-switch ${qtyActive ? 'active' : ''}" type="button" data-action="dashboard-metric" data-id="${qtyActive ? 'usd' : 'qty'}" role="switch" aria-checked="${qtyActive}" aria-label="Alternar unidade de análise"><i></i></button></div></div></section>`;
 
   const kpis = metric === 'usd'
-    ? `${kpiCard('IF Cost líquido', dashboardDisplay(current, metric, masked), filters.period, '', 'Scrap bruto menos estornos no escopo dos filtros.')}${kpiCard('Scrap bruto', dashboardDisplay(gross, metric, masked), 'Movimentos de scrap antes dos estornos')}${kpiCard('Ajustes / estornos', dashboardDisplay(adjustments, metric, masked), 'Movimentos positivos separados pela API')}${kpiCard('Target do período', target === null ? '—' : dashboardDisplay(target, metric, masked), target === null ? 'Meta não cadastrada para este recorte' : `Meta cadastrada para ${filters.year}`)}${kpiCard('Atingimento', achievement === null ? '—' : `${achievement.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, achievement === null ? 'Sem meta ou realizado no recorte' : 'Acima de 100% é favorável', achievement === null ? '' : achievement >= 100 ? 'success' : 'danger', 'Target ÷ realizado × 100. Como menor scrap é melhor, superar 100% significa gastar menos que o target.')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}`
-    : `${kpiCard('QTY SCRAP líquido', dashboardDisplay(current, metric), filters.period)}${kpiCard('Quantidade bruta', dashboardDisplay(gross, metric), 'Movimentos de scrap antes dos estornos')}${kpiCard('Ajustes / estornos', dashboardDisplay(adjustments, metric), 'Movimentos positivos separados pela API')}${kpiCard('Ocorrências', formatNumber(dashboardRows.length), 'Registros disponíveis para investigação')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}${kpiCard('Componente mais afetado', topComponent?.label || 'Sem dados', topComponent ? dashboardDisplay(topComponent.value, metric) : '')}`;
+    ? `${kpiCard('IF Cost', dashboardDisplay(current, metric, masked), filters.period)}${kpiCard('Scrap bruto', dashboardDisplay(gross, metric, masked), 'Movimentos de scrap antes dos ajustes de origem')}${kpiCard('Target do período', target === null ? '—' : dashboardDisplay(target, metric, masked), target === null ? 'Meta não cadastrada para este recorte' : `Meta cadastrada para ${filters.year}`)}${kpiCard('Atingimento', achievement === null ? '—' : `${achievement.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, achievement === null ? 'Sem meta ou realizado no recorte' : 'Acima de 100% é favorável', achievement === null ? '' : achievement >= 100 ? 'success' : 'danger')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}`
+    : `${kpiCard('QTY SCRAP', dashboardDisplay(current, metric), filters.period)}${kpiCard('Quantidade bruta', dashboardDisplay(gross, metric), 'Movimentos antes dos ajustes de origem')}${kpiCard('Ocorrências', formatNumber(dashboardRows.length), 'Registros válidos no recorte')}${kpiCard('Variação vs referência', variation === null ? '—' : formatPercentage(variation), periodContext.referenceLabel, variation === null ? '' : variation <= 0 ? 'success' : 'danger')}${kpiCard('Componente mais afetado', topComponent?.label || 'Sem dados', topComponent ? dashboardDisplay(topComponent.value, metric) : '')}`;
 
   const attention = periodContext.isCurrentDetail
     ? dashboardRows.slice().sort((a, b) => (metric === 'usd' ? b.ifCost - a.ifCost : b.qty - a.qty)).slice(0, 6).map((row) => `<tr><td>${row.transactionDate.slice(0,5)}</td><td>${row.productArea}</td><td><strong>${row.scrapLine}</strong><small class="cell-stack">${row.sector} · ${row.stationCode}</small></td><td><strong>${row.partNumber}</strong><small class="cell-stack">${row.component}</small></td><td class="number">${formatNumber(row.qty)}</td><td class="number"><strong>${masked ? 'US$ •••••' : formatCurrency(row.ifCost)}</strong></td><td>${badge(row.review.status)}</td><td><div class="table-actions">${button('Ver na Base','dashboard-row-explore',{small:true,id:row.id})}${button(row.review.status === 'Justificado' ? 'Ver revisão' : 'Revisar','dashboard-row-review',{small:true,primary:true,id:row.id})}</div></td></tr>`).join('')
     : `<tr><td colspan="8"><div class="empty-state"><strong>Detalhe histórico ainda não conectado</strong><span>Os agregados de ${filters.period} estão disponíveis na planilha, mas os registros transacionais desse mês ainda não fazem parte da massa navegável.</span></div></td></tr>`;
 
-  const absoluteContent = `<section class="dashboard-kpi-grid">${kpis}</section><section class="dashboard-grid"><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Visão anual · ${metricLabel}</span><h2>Target × realizado mensal</h2></div>${badge(metric === 'usd' ? 'Target disponível' : 'Sem target em unidades', metric === 'usd' ? 'brand' : 'warning')}</header><div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">Realizado 2026</span>${monthlyPrevious.length ? '<span class="legend-key" style="--key:var(--chart-secondary)">Referência 2025</span>' : ''}${monthlyTarget.length ? '<span class="legend-key" style="--key:var(--chart-tertiary)">Target</span>' : ''}</div>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:monthlyActual,previous:monthlyPrevious,target:monthlyTarget,actualLabel:'Realizado 2026',previousLabel:'Mesmo período 2025',unit:metric,masked,ariaLabel:'Target e realizado mensal'},300)}<div class="period-status"><span><i class="closed"></i>Jan–Jul fechados</span><span><i class="partial"></i>Ago parcial</span><span><i class="future"></i>Set–Dez futuros</span></div></article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Composição</span><h2>Distribuição por produto / área</h2><p class="panel-description">Clique em uma barra para investigar a categoria na Base de Scrap.</p></div></header>${dashboardChart({kind:'horizontal',labels:products.map((item)=>item.label),values:products.map((item)=>item.value),details:products.map((item)=>`${item.count} ocorrências · ${formatNumber(item.qty)} un.`),unit:metric,masked,drillKey:'productArea'},300)}</article><article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Comportamento do mês atual</span><h2>Evolução semanal</h2><p class="panel-description">As semanas usam agosto parcial mesmo quando o KPI está em acumulado YTD.</p></div></header>${dashboardChart({kind:'columns',labels:['S1 · 01–03','S2 · 04–06','S3 · 07–09','S4 · 10–12'],values:weekly,unit:metric,masked},245)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Investigação</span><h2>Top componentes</h2><p class="panel-description">Clique em uma barra para abrir os registros relacionados.</p></div></header>${dashboardChart({kind:'horizontal',labels:componentsRank.slice(0,5).map((item)=>item.label),values:componentsRank.slice(0,5).map((item)=>item.value),details:componentsRank.slice(0,5).map((item)=>`${item.count} registros`),unit:metric,masked,drillKey:'component'},245)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking</span><h2>Linhas mais afetadas</h2></div></header>${dashboardChart({kind:'horizontal',labels:linesRank.map((item)=>item.label),values:linesRank.map((item)=>item.value),details:linesRank.map((item,index)=>`Posição ${index+1} no recorte atual`),unit:metric,masked,drillKey:'scrapLine'},230)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking</span><h2>Modelos mais afetados</h2></div></header>${dashboardChart({kind:'horizontal',labels:modelsRank.slice(0,6).map((item)=>item.label),values:modelsRank.map((item)=>item.value),unit:metric,masked,drillKey:'modelCode'},230)}</article><article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Resumo do recorte</span><h2>Leitura rápida</h2></div></header><dl class="dashboard-summary"><div><dt>Produto líder</dt><dd>${products[0]?.label || 'Sem dados'}</dd></div><div><dt>Linha líder</dt><dd>${linesRank[0]?.label || 'Sem dados'}</dd></div><div><dt>Componente líder</dt><dd>${componentsRank[0]?.label || 'Sem dados'}</dd></div><div><dt>Registros disponíveis</dt><dd>${formatNumber(dashboardRows.length)}</dd></div></dl><p class="summary-note">“Líder” significa maior impacto de scrap, portanto requer atenção.</p></article><article class="panel chart-span-12"><header class="panel-header"><div><span class="panel-kicker">Perdas brutas</span><h2>Pareto de Part Numbers</h2><p class="panel-description">Clique em uma coluna para investigar o Part Number na Base.</p></div></header>${dashboardChart({kind:'pareto',labels:partRank.map((item)=>item.label),values:partRank.map((item)=>item.value),cumulative:paretoCumulative,unit:metric,masked,drillKey:'partNumber'},315)}</article><article class="panel chart-span-12"><header class="panel-header"><div><span class="panel-kicker">QTY SCRAP por posto</span><h2>Mapa de risco por linha e setor</h2><p class="panel-description">Primeira representação funcional. O desenho industrial definitivo e os limites de risco ainda precisam de homologação.</p></div><div class="risk-legend"><span><i class="low"></i>Baixo</span><span><i class="moderate"></i>Moderado</span><span><i class="critical"></i>Crítico</span></div></header>${dashboardRiskMap(dashboardRows, aggregateScale)}</article></section>${tablePanel(periodContext.isCurrentDetail ? 'Ocorrências prioritárias — amostra navegável' : `Ocorrências prioritárias — ${filters.period}`,[{label:'Data'},{label:'Produto'},{label:'Linha / posto'},{label:'Item / componente'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Revisão'},{label:'Ações'}],attention)}`;
+  const absoluteContent = `<section class="dashboard-kpi-grid">${kpis}</section>
+    <section class="dashboard-grid">
+      <article class="panel chart-span-8">
+        <header class="panel-header"><div><span class="panel-kicker">Visão anual · ${metricLabel}</span><h2>Target × realizado mensal</h2></div>${badge(metric === 'usd' ? 'Target disponível' : 'Sem target em unidades', metric === 'usd' ? 'brand' : 'warning')}</header>
+        <div class="chart-legend"><span class="legend-key" style="--key:var(--chart-main)">Realizado ${filters.year}</span>${monthlyPrevious.length ? `<span class="legend-key" style="--key:var(--chart-secondary)">Referência ${Number(filters.year) - 1}</span>` : ''}${monthlyTarget.length ? '<span class="legend-key" style="--key:var(--chart-tertiary)">Target</span>' : ''}</div>
+        ${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:monthlyActual,previous:monthlyPrevious,target:monthlyTarget,actualLabel:`Realizado ${filters.year}`,previousLabel:`Mesmo período ${Number(filters.year) - 1}`,unit:metric,masked,ariaLabel:'Target e realizado mensal'},300)}
+        <div class="period-status"><span><i class="closed"></i>Jan–Jul fechados</span><span><i class="partial"></i>Ago parcial</span><span><i class="future"></i>Set–Dez futuros</span></div>
+      </article>
+      <article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Composição</span><h2>Distribuição por produto / área</h2></div></header>${dashboardChart({kind:'horizontal',labels:products.map((item)=>item.label),values:products.map((item)=>item.value),details:products.map((item)=>`${item.count} ocorrências · ${formatNumber(item.qty)} un.`),unit:metric,masked,drillKey:'productArea'},300)}</article>
+      <article class="panel chart-span-8"><header class="panel-header"><div><span class="panel-kicker">Comportamento do mês atual</span><h2>Evolução semanal</h2></div></header>${dashboardChart({kind:'columns',labels:weeklyLabels,values:weekly,unit:metric,masked},245)}</article>
+      <article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Investigação</span><h2>Top 10 componentes</h2></div></header>${dashboardChart({kind:'horizontal',labels:componentsRank.slice(0,10).map((item)=>item.label),values:componentsRank.slice(0,10).map((item)=>item.value),details:componentsRank.slice(0,10).map((item)=>`${item.count} registros`),unit:metric,masked,drillKey:'component'},245)}</article>
+      <article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking</span><h2>Top 10 linhas</h2></div></header>${dashboardChart({kind:'horizontal',labels:linesRank.slice(0,10).map((item)=>item.label),values:linesRank.slice(0,10).map((item)=>item.value),details:linesRank.slice(0,10).map((item,index)=>`Posição ${index+1} no recorte atual`),unit:metric,masked,drillKey:'scrapLine'},230)}</article>
+      <article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Ranking</span><h2>Top 10 modelos</h2></div></header>${dashboardChart({kind:'horizontal',labels:modelsRank.slice(0,10).map((item)=>item.label),values:modelsRank.slice(0,10).map((item)=>item.value),unit:metric,masked,drillKey:'modelCode'},230)}</article>
+      <article class="panel chart-span-4"><header class="panel-header"><div><span class="panel-kicker">Composição</span><h2>Top 5 ofensores</h2></div></header>${dashboardChart({kind:'horizontal',labels:topOffenders.map((item)=>item.label),values:topOffenders.map((item)=>item.value),details:topOffenders.map((item)=>componentTotal ? `${(item.value / componentTotal * 100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% do recorte` : '—'),unit:metric,masked,drillKey:'component'},230)}</article>
+    </section>
+    ${tablePanel(periodContext.isCurrentDetail ? 'Ocorrências prioritárias — amostra navegável' : `Ocorrências prioritárias — ${filters.period}`,[{label:'Data'},{label:'Produto'},{label:'Linha / posto'},{label:'Item / componente'},{label:'QTY',number:true},{label:'IF Cost',number:true},{label:'Revisão'},{label:'Ações'}],attention)}`;
 
-  const emptyScope = dashboardRows.length ? '' : `<section class="dashboard-empty-scope">${icon('filter')}<div><strong>Nenhum registro combina com os filtros dimensionais</strong><p>Os totais foram zerados para evitar inferência incorreta. Remova um dos filtros de produto, linha, componente ou Part Number.</p></div><button class="btn small" data-action="clear-dashboard">Voltar à visão consolidada</button></section>`;
-  return `<section class="page-stack dashboard-page"><header class="dashboard-page-header"><div><h1 class="page-title">Dashboard de Material Scrap / IF Cost</h1><p>Atualizado em ${state.dashboardUpdatedAt} · dados com até 2h de defasagem · EXE-20260815-0051</p></div><div class="page-actions">${button('Atualizar','refresh-dashboard',{icon:'refresh'})}${button('Exportar dados','export-dashboard',{icon:'download'})}${button('Criar relatório','go-reports',{icon:'report',primary:true})}</div></header><section class="dashboard-filter-panel"><div class="dashboard-filter-row">${fields}<button class="btn dashboard-more-filter" type="button" data-action="dashboard-more-filters">${icon('sliders')}Mais filtros</button></div><footer>${dashboardActiveFilters(filters)}<button class="link-button" data-action="clear-dashboard">Limpar todos</button></footer></section>${analysisBar}${emptyScope}${state.dashboardAnalysis === 'relative' ? renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimensionFactor }) : absoluteContent}</section>`;
+  const activeDimensions = [
+    ['Produto', dashboardFilterValues(filters.product)],
+    ['Linha', dashboardFilterValues(filters.scrapLine, 'Todas')],
+    ['Divisão', dashboardFilterValues(filters.division)],
+    ['Semana', dashboardFilterValues(filters.week, 'Todas')],
+    ['Componente', filters.component === 'Todos' ? [] : [filters.component]],
+  ].filter(([, values]) => values.length);
+  const activeDimensionText = activeDimensions.map(([label, values]) => `${label}: ${values.join(', ')}`).join(' · ');
+  const incompatibleQuery = !dashboardRows.length && activeDimensions.length > 1;
+  const emptyScope = dashboardRows.length ? '' : `<section class="dashboard-empty-scope" role="status" aria-live="polite">${icon('filter')}<div><strong>${incompatibleQuery ? 'Esta combinação não existe nos dados' : 'Nenhum registro encontrado'}</strong><p>${activeDimensionText || 'O período selecionado não possui registros.'}</p></div><button class="btn small" data-action="clear-dashboard">Voltar à visão consolidada</button></section>`;
+  return `<section class="page-stack dashboard-page"><section class="dashboard-filter-panel"><div class="dashboard-filter-row">${fields}</div><div class="dashboard-filter-footer"><button type="button" data-action="clear-dashboard-selection">Limpar seleção</button></div></section>${analysisBar}${emptyScope}${state.dashboardAnalysis === 'relative' ? renderRelativeDashboard({ filters, metric, masked, dashboardRows, dimensionFactor }) : absoluteContent}</section>`;
 }
 
 function filteredTransactions() {
@@ -1248,11 +1350,12 @@ function filteredTransactions() {
   const contextualAlert = state.context.alertId ? model.alerts.find((alert) => alert.id === state.context.alertId) : null;
   let data = model.transactions.filter((t) =>
     (!q || [t.id,t.partNumber,t.itemDescription,t.component,t.accountAlias,t.executionId,t.productArea,t.modelCode,t.scrapLine,t.sector,t.stationCode].some((v) => String(v).toLowerCase().includes(q))) &&
-    (state.scrapFilters.date==='Todas as datas'||state.scrapFilters.date==='Agosto/2026'||(state.scrapFilters.date==='Hoje'&&t.transactionDate==='12/08/2026')||(state.scrapFilters.date==='Últimos 7 dias'&&Number(t.transactionDate.slice(0,2))>=6)) &&
+    scrapPeriodMatches(t, state.scrapFilters.date) &&
     (state.scrapFilters.productArea==='Todos'||t.productArea===state.scrapFilters.productArea) &&
+    (state.scrapFilters.division==='Todas'||t.division===state.scrapFilters.division) &&
     (state.scrapFilters.scrapLine==='Todas'||t.scrapLine===state.scrapFilters.scrapLine) &&
-    (state.scrapFilters.movementType==='Todos'||t.movementType===state.scrapFilters.movementType) &&
-    (state.scrapFilters.processingStatus==='Todos'||t.processingStatus===state.scrapFilters.processingStatus) &&
+    (state.scrapFilters.component==='Todos'||t.component===state.scrapFilters.component) &&
+    (state.scrapFilters.modelCode==='Todos'||t.modelCode===state.scrapFilters.modelCode) &&
     (state.scrapFilters.reviewStatus==='Todos'||t.review.status===state.scrapFilters.reviewStatus) &&
     (state.scrapAdvancedFilters.organizationCode==='Todas'||t.organizationCode===state.scrapAdvancedFilters.organizationCode) &&
     (state.scrapAdvancedFilters.accountAlias==='Todos'||t.accountAlias===state.scrapAdvancedFilters.accountAlias) &&
@@ -1260,11 +1363,10 @@ function filteredTransactions() {
     (state.scrapAdvancedFilters.subinventory==='Todos'||t.subinventory===state.scrapAdvancedFilters.subinventory) &&
     (state.scrapAdvancedFilters.warehouseMarket==='Todos'||t.warehouseMarket===state.scrapAdvancedFilters.warehouseMarket) &&
     (state.scrapAdvancedFilters.receiptDepartment==='Todos'||t.receiptDepartment===state.scrapAdvancedFilters.receiptDepartment) &&
-    (state.scrapAdvancedFilters.component==='Todos'||t.component===state.scrapAdvancedFilters.component) &&
-    (state.scrapAdvancedFilters.modelCode==='Todos'||t.modelCode===state.scrapAdvancedFilters.modelCode) &&
     (state.scrapAdvancedFilters.sector==='Todos'||t.sector===state.scrapAdvancedFilters.sector) &&
     (state.scrapAdvancedFilters.stationCode==='Todos'||t.stationCode===state.scrapAdvancedFilters.stationCode) &&
     (state.scrapAdvancedFilters.partNumber==='Todos'||t.partNumber===state.scrapAdvancedFilters.partNumber) &&
+    (state.scrapAdvancedFilters.processingStatus==='Todos'||t.processingStatus===state.scrapAdvancedFilters.processingStatus) &&
     (state.scrapAdvancedFilters.reportInclusion==='Todos'||(state.scrapAdvancedFilters.reportInclusion==='Incluído'&&t.review.includeInReport)||(state.scrapAdvancedFilters.reportInclusion==='Não incluído'&&!t.review.includeInReport)) &&
     (!state.context.productArea || t.productArea === state.context.productArea) &&
     (!state.context.component || t.component === state.context.component) &&
@@ -1301,20 +1403,21 @@ function renderScrap() {
   const metricShare = totalReference ? metricTotal / totalReference * 100 : 0;
   const selected = model.transactions.filter((row) => state.selectedScrapIds.includes(row.id));
   const mixedSelection = new Set(selected.map((row) => `${row.component}|${row.scrapLine}`)).size > 1;
-  const ranking = aggregateTransactions(filtered, 'partNumber')
+  const ranking = aggregateTransactions(filtered, 'component')
     .sort((a, b) => metric === 'usd' ? b.value - a.value : b.qty - a.qty)
     .slice(0, 8);
   const sortLabel = (label, key) => `<button class="sort-button" data-action="sort-scrap" data-key="${key}">${label}${state.scrapSort.key === key ? (state.scrapSort.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>`;
   const rows = data.map((t) => `<tr data-row-id="${t.id}" data-row-type="transaction" class="${state.selectedScrapIds.includes(t.id) ? 'selected-row' : ''}" title="${t.occurrence}">
-    <td><input type="checkbox" data-action="toggle-scrap" data-id="${t.id}" aria-label="Selecionar ${t.id}" ${state.selectedScrapIds.includes(t.id) ? 'checked' : ''}></td>
+    <td><button class="row-check-action ${state.selectedScrapIds.includes(t.id) ? 'selected' : ''}" type="button" data-action="toggle-scrap" data-id="${t.id}" aria-pressed="${state.selectedScrapIds.includes(t.id)}" aria-label="${state.selectedScrapIds.includes(t.id) ? 'Remover da seleção' : 'Adicionar à seleção'}">${icon('check')}</button></td>
     <td>${t.transactionDate}<small class="cell-stack">${t.id}</small></td>
-    <td><strong>${t.productArea}</strong><small class="cell-stack">${t.modelCode}</small></td>
+    <td><strong>${t.productArea}</strong><small class="cell-stack">${t.modelCode} · ${t.division}</small></td>
     <td><strong>${t.scrapLine} · ${t.stationCode}</strong><small class="cell-stack">${t.sector}</small></td>
-    <td><strong>${t.partNumber}</strong><small class="cell-stack">${t.component}</small></td>
-    <td class="number signed-value">${formatNumber(t.issueQuantitySigned)}</td>
+    <td><strong>${t.component}</strong><small class="cell-stack">${t.itemDescription}</small></td>
+    <td><strong>${t.partNumber}</strong><small class="cell-stack">${t.accountAlias}</small></td>
     <td class="number"><strong>${formatNumber(t.qty)}</strong></td>
     <td class="number"><strong>${t.ifCost ? money(t.ifCost) : '—'}</strong></td>
-    <td>${badge(t.movementType)}</td><td>${badge(t.processingStatus)}</td>
+    <td class="source-comment" title="${t.occurrence}">${t.occurrence}</td>
+    <td>${badge(t.processingStatus)}</td>
     <td>${badge(t.review.status)}${t.review.includeInReport ? '<small class="cell-stack">No relatório</small>' : ''}</td>
     <td>${button(t.review.status === 'Justificado' ? 'Ver revisão' : 'Revisar', 'review-one', { small: true, id: t.id })}</td>
   </tr>`).join('');
@@ -1322,26 +1425,31 @@ function renderScrap() {
     ? money(selected.reduce((sum, row) => sum + row.ifCost, 0))
     : `${formatNumber(selected.reduce((sum, row) => sum + row.qty, 0))} un.`;
   const selectionBar = selected.length ? `<section class="selection-bar ${mixedSelection ? 'warning' : ''}"><div><strong>${selected.length} registro${selected.length > 1 ? 's' : ''} selecionado${selected.length > 1 ? 's' : ''}</strong><span>${selectedValue}${mixedSelection ? ' · componentes ou linhas diferentes: revise antes de aplicar em lote' : ''}</span></div>${button('Limpar seleção', 'clear-scrap-selection')}${button('Justificar selecionados', 'review-selected', { primary: true, icon: 'check' })}</section>` : '';
-  const analysisBar = `<section class="dashboard-analysis-bar base-analysis-bar"><div><strong>Medida da análise</strong><small>O seletor atualiza resumo, ranking e leitura da seleção.</small></div><div class="analysis-controls"><div class="segmented-control metric-switch"><button class="${metric === 'usd' ? 'active' : ''}" data-action="dashboard-metric" data-id="usd">US$</button><button class="${metric === 'qty' ? 'active' : ''}" data-action="dashboard-metric" data-id="qty">QTY SCRAP</button></div>${metric === 'usd' ? `<button class="privacy-toggle ${masked ? 'active' : ''}" data-action="dashboard-mask">${icon(masked ? 'eyeOff' : 'eye')}<span>${masked ? 'Valores ocultos' : 'Ocultar valores'}</span></button>` : ''}</div></section>`;
-  const filters = field('Período', 'scrap-date', ['Todas as datas', 'Hoje', 'Últimos 7 dias', 'Agosto/2026'], state.scrapFilters.date)
-    + field('Produto / área', 'scrap-product-area', ['Todos', ...productAreas], state.scrapFilters.productArea)
+  const analysisBar = metricDisplayBar('Medida da análise', metric, masked);
+  const availablePeriods = [...new Set(model.transactions.map(transactionPeriodLabel))].filter((value) => value !== 'Não informado').sort((a, b) => {
+    const [monthA, yearA] = a.split('/'), [monthB, yearB] = b.split('/');
+    return Number(yearB) - Number(yearA) || monthNamesPt.indexOf(monthB) - monthNamesPt.indexOf(monthA);
+  });
+  const filters = field('Período', 'scrap-date', ['Todas as datas', 'Últimos 7 dias', ...availablePeriods], state.scrapFilters.date)
+    + field('Produto', 'scrap-product-area', ['Todos', ...productAreas], state.scrapFilters.productArea)
+    + field('Divisão', 'scrap-division', ['Todas', ...divisions], state.scrapFilters.division)
     + field('Linha', 'scrap-line', ['Todas', ...scrapLines], state.scrapFilters.scrapLine)
-    + field('Movimentação', 'scrap-movement-type', ['Todos', 'Scrap', 'Ajuste / possível estorno'], state.scrapFilters.movementType)
-    + field('Processamento', 'scrap-processing-status', ['Todos', 'Validado', 'Rejeitado', 'Pendente'], state.scrapFilters.processingStatus)
-    + field('Revisão', 'scrap-review-status', ['Todos', 'Pendente de revisão', 'Em revisão', 'Justificado'], state.scrapFilters.reviewStatus);
+    + field('Componente', 'scrap-component', ['Todos', ...components], state.scrapFilters.component)
+    + field('Modelo', 'scrap-model-code', ['Todos', ...modelCodes], state.scrapFilters.modelCode)
+    + field('Status da revisão', 'scrap-review-status', ['Todos', 'Pendente de revisão', 'Em revisão', 'Justificado'], state.scrapFilters.reviewStatus);
   const rankingRows = ranking.map((item, index) => {
     const value = metric === 'usd' ? item.value : item.qty;
     const max = metric === 'usd' ? ranking[0].value : ranking[0].qty;
-    return `<button class="ranking-item" data-action="drill-part" data-id="${item.label}"><span>${index + 1}</span><div><strong>${item.label}</strong><small>${item.count} registros · ${formatNumber(item.qty)} un.</small><i><b style="width:${max ? value / max * 100 : 0}%"></b></i></div><em>${metric === 'usd' ? money(item.value) : `${formatNumber(item.qty)} un.`}</em>${icon('chevronRight')}</button>`;
+    return `<button class="ranking-item" data-action="drill-component" data-id="${item.label}"><span>${index + 1}</span><div><strong>${item.label}</strong><small>${item.count} registros · ${formatNumber(item.qty)} un.</small><i><b style="width:${max ? value / max * 100 : 0}%"></b></i></div><em>${metric === 'usd' ? money(item.value) : `${formatNumber(item.qty)} un.`}</em>${icon('chevronRight')}</button>`;
   }).join('');
   const table = tablePanel('Registros de scrap', [
-    { label: `<input type="checkbox" data-action="select-visible-scrap" aria-label="Selecionar registros visíveis" ${data.length && data.every((row) => state.selectedScrapIds.includes(row.id)) ? 'checked' : ''}>` },
+    { label: `<button class="row-check-action ${data.length && data.every((row) => state.selectedScrapIds.includes(row.id)) ? 'selected' : ''}" type="button" data-action="select-visible-scrap" aria-pressed="${Boolean(data.length && data.every((row) => state.selectedScrapIds.includes(row.id)))}" aria-label="Selecionar registros visíveis" title="Selecionar registros visíveis">${icon('check')}</button>` },
     { label: sortLabel('Data / ID', 'transactionDate') }, { label: 'Produto / modelo' }, { label: 'Linha / posto' },
-    { label: sortLabel('PN / componente', 'partNumber') }, { label: 'Issue Qty', number: true },
+    { label: sortLabel('Componente', 'component') }, { label: sortLabel('Part Number', 'partNumber') },
     { label: sortLabel('QTY SCRAP', 'qty'), number: true }, { label: sortLabel('IF Cost', 'ifCost'), number: true },
-    { label: 'Movimento' }, { label: 'Processamento' }, { label: 'Revisão' }, { label: 'Ação' }
+    { label: 'Comentário da origem' }, { label: 'Processamento' }, { label: 'Revisão' }, { label: 'Ação' }
   ], rows, { pagination: pagination(filtered.length) });
-  return `<section class="page-stack scrap-page">${pageHeader('Base de Scrap', button('Exportar dados', 'export-scrap', { icon: 'download' }))}<section class="filter-panel context-panel scrap-filter-panel">${contextTrail()}<div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="scrap-search" value="${state.scrapSearch}" placeholder="Buscar ID, código, componente, modelo, linha ou execução..." aria-label="Buscar registros de scrap"></div><button class="btn" data-action="more-filters">${icon('filter')}Mais filtros</button></div><div class="scrap-filter-grid">${filters}</div></section>${analysisBar}${selectionBar}<section class="kpi-grid">${kpiCard(metric === 'usd' ? 'IF Cost filtrado' : 'QTY SCRAP filtrada', metric === 'usd' ? money(ifCost) : formatNumber(qty))}${kpiCard('Registros', formatNumber(filtered.length), 'Ocorrências no recorte')}${kpiCard('Participação no total', `${metricShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, metric === 'usd' ? 'Por IF Cost' : 'Por QTY SCRAP')}${kpiCard('Pendentes de revisão', formatNumber(filtered.filter((row) => row.review.status !== 'Justificado').length))}${kpiCard('Justificados', formatNumber(filtered.filter((row) => row.review.status === 'Justificado').length))}</section><section class="panel ranking-panel"><header class="panel-header"><div><h2>Ranking dinâmico de Part Numbers</h2><p class="panel-description">Ordenado por ${metric === 'usd' ? 'IF Cost' : 'QTY SCRAP'} no recorte atual. Clique para aprofundar.</p></div></header><div class="ranking-grid">${rankingRows || '<div class="empty-state">Nenhum Part Number no contexto atual.</div>'}</div></section>${table}</section>`;
+  return `<section class="page-stack scrap-page">${pageHeader('Base de Scrap', button('Exportar dados', 'export-scrap', { icon: 'download' }))}<section class="dashboard-filter-panel screen-filter-panel context-panel scrap-filter-panel">${contextTrail()}<div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="scrap-search" value="${state.scrapSearch}" placeholder="Buscar ID, Part Number, componente, modelo, linha ou execução..." aria-label="Buscar registros de scrap"></div><button class="btn" data-action="more-filters">${icon('filter')}Mais filtros</button></div><div class="dashboard-filter-row screen-filter-row scrap-filter-grid">${filters}</div><div class="dashboard-filter-footer"><button type="button" data-action="clear-scrap-filters">Limpar seleção</button></div></section>${analysisBar}<section class="kpi-grid">${kpiCard(metric === 'usd' ? 'IF Cost filtrado' : 'QTY SCRAP filtrada', metric === 'usd' ? money(ifCost) : formatNumber(qty))}${kpiCard('Registros', formatNumber(filtered.length), 'Ocorrências no recorte')}${kpiCard('Participação no total', `${metricShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, metric === 'usd' ? 'Por IF Cost' : 'Por QTY SCRAP')}${kpiCard('Pendentes de revisão', formatNumber(filtered.filter((row) => row.review.status !== 'Justificado').length))}${kpiCard('Justificados', formatNumber(filtered.filter((row) => row.review.status === 'Justificado').length))}</section><section class="panel ranking-panel"><header class="panel-header"><div><h2>Ranking de componentes</h2><p class="panel-description">Ordenado por ${metric === 'usd' ? 'IF Cost' : 'QTY SCRAP'} no recorte atual.</p></div></header><div class="ranking-grid">${rankingRows || '<div class="empty-state">Nenhum componente no contexto atual.</div>'}</div></section>${selectionBar}${table}</section>`;
 }
 
 function syncScrapReview() {
@@ -1367,6 +1475,17 @@ function syncScrapReview() {
   row.review.executiveHighlight=value('#review-executive-highlight',row.review.executiveHighlight);
   row.review.reportOrder=Number(value('#review-report-order',row.review.reportOrder))||row.review.reportOrder;
   row.review.includeInReport=$('#review-include-report')?.checked??row.review.includeInReport;
+  state.reviewApplyAll=$('#review-apply-all')?.checked??state.reviewApplyAll;
+}
+function applyReviewTemplate(source, target) {
+  const sharedFields = ['title','category','reason','requiresCause','risk','recurrence','fiveWhys','rootCause','immediate','corrective','preventive','responsible','responsibleDepartment','dueDate','actionStatus','expectedResult','actualResult','executiveHighlight'];
+  const result = { ...target };
+  sharedFields.forEach((key) => { result[key] = source[key]; });
+  result.classification4m = [...source.classification4m];
+  result.evidence = [...target.evidence];
+  result.reportOrder = target.reportOrder;
+  result.includeInReport = target.includeInReport;
+  return result;
 }
 function renderScrapReview() {
   const selected=model.transactions.filter((row)=>state.selectedScrapIds.includes(row.id));
@@ -1375,26 +1494,37 @@ function renderScrapReview() {
   const row=selected.find((item)=>item.id===state.activeReviewId),review=row.review;
   const masked=state.dashboardMasked;
   const money=(value)=>masked?'US$ •••••':formatCurrency(value);
-  const selectionGroups=new Set(selected.map((item)=>`${item.component}|${item.scrapLine}`));
-  const mixedSelection=selectionGroups.size>1;
-  const list=selected.map((item,index)=>`<button class="review-list-item ${item.id===row.id?'active':''}" data-action="select-review-item" data-id="${item.id}"><span>${index+1}</span><div><strong>${item.partNumber}</strong><small>${item.productArea} · ${item.scrapLine}/${item.stationCode}</small><small>${item.component} · ${item.id}</small></div>${badge(item.review.status)}</button>`).join('');
-  const facts=[['Data',row.transactionDate],['Produto / modelo',`${row.productArea} · ${row.modelCode}`],['Linha / setor',`${row.scrapLine} · ${row.sector}`],['Posto',`${row.stationCode} · ${row.station}`],['Componente',row.component],['QTY SCRAP',`${formatNumber(row.qty)} un.`],['Issue Qty original',formatNumber(row.issueQuantitySigned)],['IF Cost',money(row.ifCost)],['Movimento',row.movementType],['Execução',row.executionId]];
-  const reviewFields=`<section class="review-section"><header><span>1</span><div><h3>Problema e classificação</h3><p>Defina o que ocorreu e como o problema deve ser priorizado.</p></div></header><div class="form-grid"><div class="field full"><label for="review-title">Título do problema</label><input class="control" id="review-title" value="${review.title}" placeholder="Ex.: painel riscado no transporte interno"></div>${field('Categoria','review-category',['Selecione...','Material','Processo','Máquina','Mão de obra','Engenharia','Fornecedor','Outro'],review.category)}${field('Risco','review-risk',['Baixo','Médio','Alto','Crítico'],review.risk)}${field('Recorrência','review-recurrence',['Pontual','Recorrente','Em validação'],review.recurrence)}<div class="field"><label for="review-responsible">Responsável pela análise</label><input class="control" id="review-responsible" value="${review.responsible}"></div><div class="field full"><label for="review-reason">Justificativa / descrição do problema *</label><textarea class="control" id="review-reason" placeholder="Descreva o motivo deste registro de scrap...">${review.reason}</textarea></div></div></section>
-  <section class="review-section"><header><span>2</span><div><h3>Análise de causa</h3><p>A causa raiz é obrigatória para concluir; 4M e 5 Porquês apoiam a investigação.</p></div></header><div class="form-grid"><div class="field full"><span class="field-label">Classificação 4M</span><div class="choice-group">${['Machine','Method','Material','Man'].map((value)=>`<button class="choice ${review.classification4m.includes(value)?'selected':''}" data-action="toggle-review-4m" data-value="${value}">${value}</button>`).join('')}</div></div><div class="field full"><label for="review-five-whys">5 Porquês / raciocínio da análise</label><textarea class="control" id="review-five-whys" placeholder="Registre a sequência usada para chegar à causa...">${review.fiveWhys}</textarea></div><div class="field full"><label for="review-root-cause">Causa raiz validada *</label><textarea class="control" id="review-root-cause" placeholder="Registre a causa validada...">${review.rootCause}</textarea></div></div></section>
-  <section class="review-section"><header><span>3</span><div><h3>Plano de ação</h3><p>Separe contenção imediata, correção e prevenção de recorrência.</p></div></header><div class="form-grid"><div class="field full"><label for="review-immediate">Ação imediata / contenção</label><textarea class="control" id="review-immediate">${review.immediate}</textarea></div><div class="field"><label for="review-corrective">Ação corretiva</label><textarea class="control" id="review-corrective">${review.corrective}</textarea></div><div class="field"><label for="review-preventive">Ação preventiva</label><textarea class="control" id="review-preventive">${review.preventive}</textarea></div><div class="field"><label for="review-department">Departamento responsável</label><input class="control" id="review-department" value="${review.responsibleDepartment}"></div><div class="field"><label for="review-due-date">Prazo</label><input class="control" id="review-due-date" value="${review.dueDate}" placeholder="dd/mm/aaaa"></div>${field('Status da ação','review-action-status',['Planejada','Em andamento','Concluída','Bloqueada'],review.actionStatus)}</div><div class="inline-actions review-plan-action">${button('Criar ou vincular plano de ação','create-review-plan',{icon:'plus'})}</div></section>
-  <section class="review-section"><header><span>4</span><div><h3>Resultado, evidências e relatório</h3><p>Prepare o conteúdo que poderá alimentar o relatório mensal e o PPTX.</p></div></header><div class="form-grid"><div class="field"><label for="review-expected-result">Resultado esperado</label><textarea class="control" id="review-expected-result">${review.expectedResult}</textarea></div><div class="field"><label for="review-actual-result">Resultado observado</label><textarea class="control" id="review-actual-result">${review.actualResult}</textarea></div><div class="field full"><label for="review-executive-highlight">Destaque executivo / melhoria principal</label><textarea class="control" id="review-executive-highlight" placeholder="Síntese curta para o relatório...">${review.executiveHighlight}</textarea></div><div class="field"><label for="review-report-order">Ordem sugerida no relatório</label><input class="control" id="review-report-order" type="number" min="1" value="${review.reportOrder}"></div><div class="field review-report-toggle"><span class="field-label">Curadoria</span><label class="checkbox-row"><input id="review-include-report" type="checkbox" ${review.includeInReport?'checked':''}> Incluir no próximo relatório</label></div></div><section class="review-evidence"><header><div><h3>Evidências (${review.evidence.length})</h3><p>Fotos, documentos, antes/depois ou referência GERP vinculados ao registro.</p></div>${button('Adicionar evidência','add-review-evidence',{small:true,icon:'plus'})}</header>${review.evidence.length?review.evidence.map((item)=>`<span class="badge brand">${icon('file')}${item}</span>`).join(' '):'<div class="review-empty">Nenhuma evidência adicionada.</div>'}</section></section>`;
-  const applyAll=selected.length>1?`<label class="apply-all ${mixedSelection?'warning':''}"><input id="review-apply-all" type="checkbox" checked><span><strong>Aplicar esta revisão aos ${selected.length} registros selecionados</strong><small>${mixedSelection?'A seleção mistura componentes ou linhas; uma confirmação adicional será solicitada.':'Os registros pertencem ao mesmo agrupamento operacional. Você ainda pode ajustá-los individualmente.'}</small></span></label>`:'';
-  return `<section class="page-stack review-subpage">${pageHeader('Revisar e justificar scrap',`${button('Voltar para a Base','back-scrap',{icon:'chevronLeft'})}${button('Salvar rascunho','save-scrap-review')}${button(`Concluir revisão${selected.length>1?' em lote':''}`,'conclude-scrap-review',{primary:true,icon:'check'})}`)}<div class="review-context"><span>Base de Scrap</span>${icon('chevronRight')}<strong>${selected.length} registro${selected.length>1?'s':''}</strong></div><div class="review-layout"><aside class="review-list"><header><h2>Seleção</h2><p>Abra cada item para revisar diferenças antes da aplicação em lote.</p></header>${list}<footer><strong>${state.dashboardMetric==='usd'?money(selected.reduce((sum,item)=>sum+item.ifCost,0)):`${formatNumber(selected.reduce((sum,item)=>sum+item.qty,0))} un.`}</strong><span>${selected.length} ocorrências</span></footer></aside><article class="review-workspace"><section class="review-facts"><header><div><span class="block-kicker">Contexto da ocorrência</span><h2>${row.partNumber} · ${row.itemDescription}</h2><p>${row.defect}: ${row.occurrence}</p></div>${badge(review.status)}</header><div class="meta-grid">${facts.map(([label,value])=>`<div class="meta-item"><small>${label}</small><strong>${value}</strong></div>`).join('')}</div><div class="formula-note"><strong>Leitura da quantidade</strong><span>Issue Qty preserva o sinal recebido (${formatNumber(row.issueQuantitySigned)}). QTY SCRAP usa o módulo para análise: |${formatNumber(row.issueQuantitySigned)}| = ${formatNumber(row.qty)}.</span></div></section><section class="review-form structured-review"><header><div><span class="block-kicker">Revisão humana</span><h2>Registro de causa e ação</h2><p>Campos marcados com * são necessários para concluir.</p></div></header>${reviewFields}</section>${applyAll}</article></div></section>`;
+  state.reviewStep=Math.min(4,Math.max(1,Number(state.reviewStep)||1));
+  const componentCount=new Set(selected.map((item)=>item.component)).size;
+  const lineCount=new Set(selected.map((item)=>item.scrapLine)).size;
+  const mixedSelection=componentCount>1||lineCount>1;
+  const selectionQuery=state.reviewSelectionSearch.trim().toLowerCase();
+  const visibleSelection=selected.filter((item)=>(state.reviewSelectionStatus==='Todos'||item.review.status===state.reviewSelectionStatus)&&(!selectionQuery||[item.partNumber,item.component,item.productArea,item.scrapLine,item.stationCode,item.id].some((value)=>String(value).toLowerCase().includes(selectionQuery))));
+  const statusOptions=['Todos',...[...new Set(selected.map((item)=>item.review.status))]];
+  const list=visibleSelection.map((item)=>{const index=selected.findIndex((entry)=>entry.id===item.id);return `<button class="review-list-item ${item.id===row.id?'active':''}" data-action="select-review-item" data-id="${item.id}"><span>${index+1}</span><div><strong>${item.component}</strong><small>${item.partNumber} · ${item.productArea}</small><small>${item.scrapLine}/${item.stationCode} · ${item.id}</small>${item.id===row.id?'<em>Registro-modelo</em>':''}</div>${badge(item.review.status)}</button>`;}).join('');
+  const facts=[['Produto / modelo',`${row.productArea} · ${row.modelCode}`],['Linha / posto',`${row.scrapLine} · ${row.stationCode}`],['Componente / PN',`${row.component} · ${row.partNumber}`],['QTY SCRAP',`${formatNumber(row.qty)} un.`],['IF Cost',money(row.ifCost)]];
+  const technicalFacts=[['Data',row.transactionDate],['Divisão / setor',`${row.division} · ${row.sector}`],['Issue Qty original',formatNumber(row.issueQuantitySigned)],['Movimento',row.movementType],['Processamento',row.processingStatus],['Execução',row.executionId]];
+  const steps=[['Problema','Problema e classificação'],['Causa','Análise de causa'],['Ação','Plano de ação'],['Resultado','Resultado e relatório']];
+  const stepper=`<nav class="review-stepper" aria-label="Etapas da revisão">${steps.map(([short,title],index)=>`<button class="${state.reviewStep===index+1?'active':''} ${state.reviewStep>index+1?'complete':''}" type="button" data-action="review-step" data-id="${index+1}" aria-current="${state.reviewStep===index+1?'step':'false'}"><span>${state.reviewStep>index+1?icon('check'):index+1}</span><small>${short}</small><strong>${title}</strong></button>`).join('')}</nav>`;
+  const stepContents=[
+    `<section class="review-section current"><header><span>1</span><div><h3>Problema e classificação</h3><p>Defina o problema que será usado como modelo.</p></div></header><div class="form-grid"><div class="field full"><label for="review-title">Título do problema</label><input class="control" id="review-title" value="${review.title}" placeholder="Ex.: painel riscado no transporte interno"></div>${field('Categoria','review-category',['Selecione...','Material','Processo','Máquina','Mão de obra','Engenharia','Fornecedor','Outro'],review.category)}${field('Risco','review-risk',['Baixo','Médio','Alto','Crítico'],review.risk)}${field('Recorrência','review-recurrence',['Pontual','Recorrente','Em validação'],review.recurrence)}<div class="field"><label for="review-responsible">Responsável pela análise *</label><input class="control" id="review-responsible" value="${review.responsible}"></div><div class="field full"><label for="review-reason">Justificativa / descrição do problema *</label><textarea class="control" id="review-reason" placeholder="Descreva o motivo deste registro de scrap...">${review.reason}</textarea></div></div></section>`,
+    `<section class="review-section current"><header><span>2</span><div><h3>Análise de causa</h3><p>Classifique e registre a causa validada.</p></div></header><div class="form-grid"><div class="field full"><span class="field-label">Classificação 4M</span><div class="choice-group">${['Machine','Method','Material','Man'].map((value)=>`<button type="button" class="choice ${review.classification4m.includes(value)?'selected':''}" data-action="toggle-review-4m" data-value="${value}">${value}</button>`).join('')}</div></div><div class="field full"><label for="review-five-whys">5 Porquês / raciocínio da análise</label><textarea class="control" id="review-five-whys" placeholder="Registre a sequência usada para chegar à causa...">${review.fiveWhys}</textarea></div><div class="field full"><label for="review-root-cause">Causa raiz validada *</label><textarea class="control" id="review-root-cause" placeholder="Registre a causa validada...">${review.rootCause}</textarea></div></div></section>`,
+    `<section class="review-section current"><header><span>3</span><div><h3>Plano de ação</h3><p>Defina contenção, correção e prevenção.</p></div></header><div class="form-grid"><div class="field full"><label for="review-immediate">Ação imediata / contenção</label><textarea class="control" id="review-immediate">${review.immediate}</textarea></div><div class="field"><label for="review-corrective">Ação corretiva</label><textarea class="control" id="review-corrective">${review.corrective}</textarea></div><div class="field"><label for="review-preventive">Ação preventiva</label><textarea class="control" id="review-preventive">${review.preventive}</textarea></div><div class="field"><label for="review-department">Departamento responsável</label><input class="control" id="review-department" value="${review.responsibleDepartment}"></div><div class="field"><label for="review-due-date">Prazo</label><input class="control" id="review-due-date" value="${review.dueDate}" placeholder="dd/mm/aaaa"></div>${field('Status da ação','review-action-status',['Planejada','Em andamento','Concluída','Bloqueada'],review.actionStatus)}</div><div class="inline-actions review-plan-action">${button('Criar ou vincular plano de ação','create-review-plan',{icon:'plus'})}</div></section>`,
+    `<section class="review-section current"><header><span>4</span><div><h3>Resultado, evidências e relatório</h3><p>Complete o conteúdo de acompanhamento e curadoria.</p></div></header><div class="form-grid"><div class="field"><label for="review-expected-result">Resultado esperado</label><textarea class="control" id="review-expected-result">${review.expectedResult}</textarea></div><div class="field"><label for="review-actual-result">Resultado observado</label><textarea class="control" id="review-actual-result">${review.actualResult}</textarea></div><div class="field full"><label for="review-executive-highlight">Destaque executivo / melhoria principal</label><textarea class="control" id="review-executive-highlight" placeholder="Síntese curta para o relatório...">${review.executiveHighlight}</textarea></div><div class="field"><label for="review-report-order">Ordem sugerida no relatório</label><input class="control" id="review-report-order" type="number" min="1" value="${review.reportOrder}"></div><div class="field review-report-toggle"><span class="field-label">Curadoria</span><label class="checkbox-row"><input id="review-include-report" type="checkbox" ${review.includeInReport?'checked':''}> Incluir no próximo relatório</label></div></div><section class="review-evidence"><header><div><h3>Evidências (${review.evidence.length})</h3><p>As evidências permanecem específicas deste registro.</p></div>${button('Adicionar evidência','add-review-evidence',{small:true,icon:'plus'})}</header>${review.evidence.length?review.evidence.map((item)=>`<span class="badge brand">${icon('file')}${item}</span>`).join(' '):'<div class="review-empty">Nenhuma evidência adicionada.</div>'}</section></section>`
+  ];
+  const batchPanel=selected.length>1?`<section class="batch-review-panel ${mixedSelection?'warning':''}"><div class="batch-review-main"><span class="block-kicker">Aplicação em lote</span><h2>${row.component} · ${row.partNumber} é o registro-modelo</h2><p>A revisão preenchida neste item poderá ser aplicada aos ${selected.length} registros selecionados.</p><div class="batch-scope"><span>${selected.length} registros</span><span>${componentCount} componente${componentCount>1?'s':''}</span><span>${lineCount} linha${lineCount>1?'s':''}</span></div></div><div class="batch-review-control"><div class="dashboard-switch-control"><span>${state.reviewApplyAll?'Aplicar a todos':'Somente este registro'}</span><button class="toggle-switch ${state.reviewApplyAll?'active':''}" type="button" data-action="toggle-review-apply-all" role="switch" aria-checked="${state.reviewApplyAll}" aria-label="Alternar aplicação em lote"><i></i></button></div><small>Dados do scrap, evidências e ordem do relatório são preservados por item.</small></div>${mixedSelection?'<p class="batch-warning">A seleção mistura componentes ou linhas. O sistema pedirá confirmação antes de concluir.</p>':''}<input id="review-apply-all" type="checkbox" ${state.reviewApplyAll?'checked':''} hidden></section>`:'';
+  const stepActions=`<footer class="review-step-actions">${state.reviewStep>1?button('Etapa anterior','review-step',{id:String(state.reviewStep-1),icon:'chevronLeft'}):'<span></span>'}<span>Etapa ${state.reviewStep} de 4</span>${state.reviewStep<4?button('Próxima etapa','review-step',{id:String(state.reviewStep+1),primary:true,icon:'chevronRight'}):button(`Concluir${selected.length>1&&state.reviewApplyAll?' em lote':''}`,'conclude-scrap-review',{primary:true,icon:'check'})}</footer>`;
+  return `<section class="page-stack review-subpage">${pageHeader(selected.length>1?'Revisão em lote':'Revisar scrap',`${button('Voltar para a Base','back-scrap',{icon:'chevronLeft'})}${button('Salvar rascunho','save-scrap-review')}${button(`Concluir${selected.length>1&&state.reviewApplyAll?' em lote':''}`,'conclude-scrap-review',{primary:true,icon:'check'})}`)}<div class="review-context"><span>Base de Scrap</span>${icon('chevronRight')}<strong>${selected.length} selecionado${selected.length>1?'s':''}</strong>${icon('chevronRight')}<span>Registro-modelo: ${row.partNumber}</span></div><div class="review-layout"><aside class="review-list"><header><h2>Itens selecionados</h2><p>Escolha o registro que servirá de modelo para a revisão.</p></header><div class="review-list-filters"><div class="search-wrap">${icon('search')}<input class="search-control" id="review-selection-search" value="${state.reviewSelectionSearch}" placeholder="Filtrar seleção..."></div><select class="control" id="review-selection-status" aria-label="Filtrar seleção por status">${statusOptions.map((status)=>`<option ${status===state.reviewSelectionStatus?'selected':''}>${status}</option>`).join('')}</select></div><div class="review-list-items">${list||'<div class="review-empty">Nenhum item neste filtro.</div>'}</div><footer><strong>${state.dashboardMetric==='usd'?money(selected.reduce((sum,item)=>sum+item.ifCost,0)):`${formatNumber(selected.reduce((sum,item)=>sum+item.qty,0))} un.`}</strong><span>${visibleSelection.length} de ${selected.length} registros</span></footer></aside><article class="review-workspace"><section class="review-facts compact"><header><div><span class="block-kicker">Registro-modelo</span><h2>${row.component} · ${row.partNumber}</h2><p>${row.defect}: ${row.occurrence}</p></div>${badge(review.status)}</header><div class="meta-grid">${facts.map(([label,value])=>`<div class="meta-item"><small>${label}</small><strong>${value}</strong></div>`).join('')}</div><details class="review-technical-details"><summary>Dados técnicos do registro</summary><div class="meta-grid">${technicalFacts.map(([label,value])=>`<div class="meta-item"><small>${label}</small><strong>${value}</strong></div>`).join('')}</div></details></section>${batchPanel}<section class="review-form structured-review"><header><div><span class="block-kicker">Revisão humana</span><h2>Registro de causa e ação</h2><p>Campos com * são obrigatórios para concluir.</p></div></header>${stepper}${stepContents[state.reviewStep-1]}${stepActions}</section></article></div></section>`;
 }
 
 function renderComponents() {
   const q=state.componentSearch.toLowerCase(),filters=state.componentFilters;
   const visible=model.components.filter((item)=>(!q||[item.id,item.itemCode,item.normalizedName,item.component,...item.aliases].some((value)=>String(value).toLowerCase().includes(q)))&&(filters.productArea==='Todos'||item.productArea===filters.productArea)&&(filters.division==='Todas'||item.division===filters.division)&&(filters.itemType==='Todos'||item.itemType===filters.itemType)&&(filters.status==='Todos'||item.status===filters.status));
   const occurrences=(item)=>model.transactions.filter((row)=>row.partNumber===item.itemCode);
-  const rows=visible.map((item)=>{const related=occurrences(item);return `<tr data-row-id="${item.id}" data-row-type="component"><td><strong>${item.itemCode}</strong><small class="cell-stack">${item.id}</small></td><td><strong>${item.normalizedName}</strong><small class="cell-stack">${item.component}</small></td><td>${item.itemType}</td><td>${item.productArea}</td><td>${item.division}</td><td class="number">${item.aliases.length}</td><td>${item.lastOccurrence}<small class="cell-stack">${related.length} ocorrências</small></td><td>${badge(item.status)}</td><td>${button('Ver detalhe','open-component',{small:true,id:item.id})}</td></tr>`}).join('');
+  const rows=visible.map((item)=>{const related=occurrences(item);return `<tr data-row-id="${item.id}" data-row-type="component"><td><strong>${item.itemCode}</strong><small class="cell-stack">${item.id}</small></td><td><strong>${item.normalizedName}</strong><small class="cell-stack">${item.component}</small></td><td>${item.itemType}</td><td>${item.productArea}</td><td>${item.division}</td><td class="number">${item.aliases.length}</td><td>${item.lastOccurrence}<small class="cell-stack">${related.length} registros</small></td><td>${badge(item.status)}</td><td>${button('Ver detalhe','open-component',{small:true,id:item.id})}</td></tr>`}).join('');
   const types=[...new Set(model.components.map((item)=>item.itemType))];
   const fields=field('Produto / área','component-product',['Todos',...productAreas],filters.productArea)+field('Divisão','component-division',['Todas','MS','MFG'],filters.division)+field('Tipo','component-type',['Todos',...types],filters.itemType)+field('Status','component-status',['Todos','Ativo','Em validação'],filters.status);
-  return `<section class="page-stack component-page">${pageHeader('Catálogo de componentes',`${button('Exportar catálogo','export-components',{icon:'download'})}${button('Novo componente','new-component',{primary:true,icon:'plus'})}`)}<section class="filter-panel"><div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="component-search" value="${state.componentSearch}" placeholder="Buscar código, descrição normalizada ou alias..."></div></div><div class="filters component-filter-grid">${fields}</div></section><section class="kpi-grid">${kpiCard('Componentes cadastrados',formatNumber(model.components.length))}${kpiCard('Visíveis no recorte',formatNumber(visible.length))}${kpiCard('Aliases mapeados',formatNumber(visible.reduce((sum,item)=>sum+item.aliases.length,0)))}${kpiCard('Em validação',formatNumber(model.components.filter((item)=>item.status==='Em validação').length),'Requer revisão de normalização','warning')}</section>${tablePanel('Dicionário normalizado',[{label:'Código / ID'},{label:'Descrição / componente'},{label:'Tipo'},{label:'Produto / área'},{label:'Divisão'},{label:'Aliases',number:true},{label:'Última ocorrência'},{label:'Status'},{label:'Ação'}],rows)}</section>`;
+  return `<section class="page-stack component-page">${pageHeader('Catálogo de componentes',`${button('Exportar catálogo','export-components',{icon:'download'})}${button('Novo componente','new-component',{primary:true,icon:'plus'})}`)}<section class="dashboard-filter-panel screen-filter-panel"><div class="scrap-search-row"><div class="search-wrap scrap-search">${icon('search')}<input class="search-control" id="component-search" value="${state.componentSearch}" placeholder="Buscar código, descrição normalizada ou alias..."></div></div><div class="dashboard-filter-row screen-filter-row component-filter-grid">${fields}</div><div class="dashboard-filter-footer"><button type="button" data-action="clear-component-filters">Limpar seleção</button></div></section><section class="kpi-grid">${kpiCard('Componentes cadastrados',formatNumber(model.components.length))}${kpiCard('Visíveis no recorte',formatNumber(visible.length))}${kpiCard('Aliases mapeados',formatNumber(visible.reduce((sum,item)=>sum+item.aliases.length,0)))}${kpiCard('Em validação',formatNumber(model.components.filter((item)=>item.status==='Em validação').length),'Requer revisão de normalização','warning')}</section>${tablePanel('Dicionário normalizado',[{label:'Código / ID'},{label:'Descrição / componente'},{label:'Tipo'},{label:'Produto / área'},{label:'Divisão'},{label:'Aliases',number:true},{label:'Última ocorrência'},{label:'Status'},{label:'Ação'}],rows)}</section>`;
 }
 
 function actionIsOverdue(item){const [day,month,year]=item.dueDate.split('/').map(Number);return new Date(year,month-1,day)<new Date(2026,7,15)&&!['Concluída','Validada'].includes(item.status);}
@@ -1409,7 +1539,7 @@ function renderActions() {
   const tableRows=visible.map((item)=>`<tr data-row-id="${item.id}" data-row-type="action"><td><strong>${item.title}</strong><small class="cell-stack">${item.id}</small></td><td>${item.productArea}<small class="cell-stack">${item.lineCode} · ${item.stationCode}</small></td><td>${item.owner}<small class="cell-stack">${item.ownerArea}</small></td><td>${badge(item.risk)}</td><td>${item.category4m}</td><td class="${actionIsOverdue(item)?'negative':''}">${item.dueDate}${actionIsOverdue(item)?'<small class="cell-stack">Vencida</small>':''}</td><td>${badge(item.status)}<small class="cell-stack">${item.progress}% concluído</small></td><td class="number"><strong>${display(item)}</strong></td><td>${button('Abrir','open-action',{small:true,id:item.id})}</td></tr>`).join('');
   const kanban=statuses.map((status)=>`<section class="kanban-column"><header><strong>${status}</strong><span>${visible.filter((item)=>item.status===status).length}</span></header>${visible.filter((item)=>item.status===status).map((item)=>`<button class="action-card" data-action="open-action" data-id="${item.id}"><span>${badge(item.risk)}</span><strong>${item.title}</strong><small>${item.productArea} · ${item.lineCode}/${item.stationCode}</small><small>${item.owner} · ${item.dueDate}</small><i><b style="width:${item.progress}%"></b></i><em>${display(item)}</em></button>`).join('')||'<div class="kanban-empty">Nenhuma ação</div>'}</section>`).join('');
   const content=state.actionView==='kanban'?`<div class="kanban-board">${kanban}</div>`:tablePanel('Ações e melhorias',[{label:'Problema / ação'},{label:'Escopo'},{label:'Responsável'},{label:'Risco'},{label:'4M'},{label:'Prazo'},{label:'Status'},{label:metric==='usd'?'IF Cost vinculado':'QTY vinculada',number:true},{label:'Ação'}],tableRows);
-  return `<section class="page-stack action-page">${pageHeader('Planos de ação e melhorias',`${button('Exportar lista','export-actions',{icon:'download'})}${button('Nova ação','new-action',{primary:true,icon:'plus'})}`)}<section class="filter-panel"><div class="filters action-filter-grid">${fields}</div></section><section class="dashboard-analysis-bar base-analysis-bar"><div><strong>Medida de impacto vinculada</strong><small>Valores resultam dos scraps associados às causas tratadas.</small></div><div class="analysis-controls"><div class="segmented-control metric-switch"><button class="${metric==='usd'?'active':''}" data-action="dashboard-metric" data-id="usd">US$</button><button class="${metric==='qty'?'active':''}" data-action="dashboard-metric" data-id="qty">QTY SCRAP</button></div>${metric==='usd'?`<button class="privacy-toggle ${masked?'active':''}" data-action="dashboard-mask">${icon(masked?'eyeOff':'eye')}<span>${masked?'Valores ocultos':'Ocultar valores'}</span></button>`:''}</div></section><section class="kpi-grid">${kpiCard('Ações abertas',formatNumber(visible.filter((item)=>!['Concluída','Validada'].includes(item.status)).length))}${kpiCard('Vencidas',formatNumber(visible.filter(actionIsOverdue).length),'Exigem replanejamento','danger')}${kpiCard('Concluídas no mês',formatNumber(visible.filter((item)=>item.status==='Concluída').length),'Aguardam ou concluíram validação','success')}${kpiCard('Aguardando eficácia',formatNumber(visible.filter((item)=>item.status==='Aguardando eficácia').length))}${kpiCard(metric==='usd'?'IF Cost vinculado':'QTY vinculada',metric==='usd'?(masked?'US$ •••••':formatCurrency(visible.reduce((sum,item)=>sum+item.ifCost,0))):formatNumber(visible.reduce((sum,item)=>sum+item.qty,0)))}</section><section class="content-grid equal action-charts"><article class="panel"><header class="panel-header"><h2>Ações por status</h2></header>${dashboardChart({kind:'donut',labels:statuses,values:statusCounts},250)}</article><article class="panel"><header class="panel-header"><h2>Atrasos por área</h2></header>${barList(lateByArea)}</article></section><article class="panel"><header class="panel-header"><div><h2>Evolução de conclusão</h2><p class="panel-description">Concluídas por mês e acumulado anual.</p></div></header>${dashboardChart({kind:'monthly',labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago'],actual:[2,3,4,5,6,8,9,11],previous:[1,2,3,4,5,6,7,8],actualLabel:'Acumulado 2026',previousLabel:'Referência',unit:'qty'},220)}</article><div class="view-toolbar"><div class="segmented-control"><button class="${state.actionView==='list'?'active':''}" data-action="action-view" data-id="list">Lista</button><button class="${state.actionView==='kanban'?'active':''}" data-action="action-view" data-id="kanban">Kanban</button></div><span>${visible.length} ações no recorte</span></div>${content}</section>`;
+  return `<section class="page-stack action-page">${pageHeader('Planos de ação e melhorias',`${button('Exportar lista','export-actions',{icon:'download'})}${button('Nova ação','new-action',{primary:true,icon:'plus'})}`)}<section class="dashboard-filter-panel screen-filter-panel"><div class="dashboard-filter-row screen-filter-row action-filter-grid">${fields}</div><div class="dashboard-filter-footer"><button type="button" data-action="clear-action-filters">Limpar seleção</button></div></section>${metricDisplayBar('Medida de impacto vinculada', metric, masked)}<section class="kpi-grid">${kpiCard('Ações abertas',formatNumber(visible.filter((item)=>!['Concluída','Validada'].includes(item.status)).length))}${kpiCard('Vencidas',formatNumber(visible.filter(actionIsOverdue).length),'Exigem replanejamento','danger')}${kpiCard('Concluídas no mês',formatNumber(visible.filter((item)=>item.status==='Concluída').length),'Aguardam ou concluíram validação','success')}${kpiCard('Aguardando eficácia',formatNumber(visible.filter((item)=>item.status==='Aguardando eficácia').length))}${kpiCard(metric==='usd'?'IF Cost vinculado':'QTY vinculada',metric==='usd'?(masked?'US$ •••••':formatCurrency(visible.reduce((sum,item)=>sum+item.ifCost,0))):formatNumber(visible.reduce((sum,item)=>sum+item.qty,0)))}</section><section class="content-grid equal action-charts"><article class="panel"><header class="panel-header"><h2>Ações por status</h2></header>${dashboardChart({kind:'donut',labels:statuses,values:statusCounts},250)}</article><article class="panel"><header class="panel-header"><h2>Atrasos por área</h2></header>${barList(lateByArea)}</article></section><article class="panel"><header class="panel-header"><div><h2>Evolução de conclusão</h2><p class="panel-description">Concluídas por mês e acumulado anual.</p></div></header>${dashboardChart({kind:'monthly',labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago'],actual:[2,3,4,5,6,8,9,11],previous:[1,2,3,4,5,6,7,8],actualLabel:'Acumulado 2026',previousLabel:'Referência',unit:'qty'},220)}</article><div class="view-toolbar"><div class="dashboard-switch-control"><span>${state.actionView==='kanban'?'Kanban':'Lista'}</span><button class="toggle-switch ${state.actionView==='kanban'?'active':''}" type="button" data-action="action-view" data-id="${state.actionView==='kanban'?'list':'kanban'}" role="switch" aria-checked="${state.actionView==='kanban'}" aria-label="Alternar visualização entre lista e Kanban"><i></i></button></div><span>${visible.length} ações no recorte</span></div>${content}</section>`;
 }
 
 function renderAlerts() {
@@ -1464,7 +1594,7 @@ function renderExecutions() {
   const lastCompleted=model.executions.find((item)=>item.status==='Concluído')||model.executions[0];
   const rows=visible.map((item)=>`<tr data-row-id="${item.id}" data-row-type="execution"><td><strong>${item.id}</strong><small class="cell-stack">${item.process}</small></td><td>${item.source}</td><td>${item.trigger||'Agendada'}</td><td>${item.start}</td><td>${item.end}</td><td>${item.duration}</td><td class="number">${formatNumber(item.received)}</td><td class="number">${formatNumber(item.valid)}</td><td class="number">${formatNumber(item.rejected)}</td><td>${badge(item.snapshotPublished||'Publicado')}</td><td>${badge(item.status)}</td><td>${item.actor||'hanaro-scheduler'}</td></tr>`).join('');
   const fields=field('Período','exec-period',['Hoje','Últimos 7 dias','Últimos 30 dias'],filters.period)+field('Status','exec-status',['Todos','Concluído','Parcial','Falha','Em andamento','Agendada'],state.executionStatus)+field('Origem','exec-source',['Todas','GERP','Contingência operacional'],filters.source)+field('Gatilho','exec-trigger',['Todos','Agendada','Manual'],filters.trigger);
-  const failures=[{label:'Câmbio indisponível',value:12,display:'12 ocorrências'},{label:'Arquivo inválido',value:7,display:'7 ocorrências'},{label:'Duplicidade',value:5,display:'5 ocorrências'},{label:'Schema divergente',value:3,display:'3 ocorrências'}];
+  const failures=[{label:'Câmbio indisponível',value:12,display:'12 eventos'},{label:'Arquivo inválido',value:7,display:'7 eventos'},{label:'Duplicidade',value:5,display:'5 eventos'},{label:'Schema divergente',value:3,display:'3 eventos'}];
   return `<section class="page-stack executions-page">${pageHeader('Execuções e atualização',`${button('Atualizar lista','refresh-executions',{icon:'refresh'})}${button('Executar agora','manual-execution',{primary:true,icon:'play'})}`)}<section class="execution-cadence"><article><span>Fonte</span><strong>GERP</strong><small>Atualização aproximada a cada 5 minutos</small></article>${icon('chevronRight')}<article><span>Rotina Hanaro</span><strong>A cada 2 horas</strong><small>Consolida scrap, tabelas e relatórios</small></article>${icon('chevronRight')}<article><span>Última publicação</span><strong>${lastCompleted.id}</strong><small>${lastCompleted.end} · próxima às 12:00</small></article></section><section class="filter-panel"><div class="filters execution-filter-grid">${fields}<div class="field"><label>Execution ID</label><input class="control" placeholder="EXE-..."></div></div></section><section class="kpi-grid">${kpiCard('Execuções hoje',formatNumber(model.executions.length))}${kpiCard('Última duração',lastCompleted.duration,lastCompleted.id)}${kpiCard('Registros recebidos',formatNumber(visible.reduce((sum,item)=>sum+item.received,0)))}${kpiCard('Válidos',formatNumber(visible.reduce((sum,item)=>sum+item.valid,0)),'Após validações','success')}${kpiCard('Falhas / parciais',formatNumber(visible.filter((item)=>['Falha','Parcial'].includes(item.status)).length),'Reprocessamento disponível quando aplicável','danger')}</section>${tablePanel('Histórico de rotinas',[{label:'Execution ID / processo'},{label:'Origem'},{label:'Gatilho'},{label:'Início'},{label:'Fim'},{label:'Duração'},{label:'Recebidos',number:true},{label:'Válidos',number:true},{label:'Rejeitados',number:true},{label:'Snapshot'},{label:'Status'},{label:'Ator'}],rows)}<article class="panel"><header class="panel-header"><div><h2>Falhas por categoria — últimos 30 dias</h2><p class="panel-description">A contingência somente é liberada depois de uma tentativa de reprocessamento sem sucesso.</p></div></header>${dashboardChart({kind:'horizontal',labels:failures.map((item)=>item.label),values:failures.map((item)=>item.value),unit:'qty'},250)}</article><p class="prototype-note">No protótipo, “Executar agora” apenas simula a rotina e não realiza chamada ao GERP.</p></section>`;
 }
 
@@ -1494,9 +1624,9 @@ function renderSettings() {
   }
   if(state.settingsTab==='rotina')content=`<section class="execution-cadence"><article><span>GERP</span><strong>≈ 5 minutos</strong><small>Cadência informada da fonte</small></article>${icon('chevronRight')}<article><span>Hanaro</span><strong>A cada 2 horas</strong><small>Fuso America/Manaus</small></article>${icon('chevronRight')}<article><span>Agenda</span><strong>Próxima às 12:00</strong><small>Última concluída às 10:00</small></article></section><section class="settings-layout"><article class="settings-card"><h2>Política de execução</h2><dl class="detail-list"><div><dt>Frequência</dt><dd>2 horas</dd></div><div><dt>Concorrência</dt><dd>Uma rotina ativa por vez</dd></div><div><dt>Reprocessamento</dt><dd>Permitido após falha/parcial</dd></div><div><dt>Snapshot</dt><dd>Publicado após validação</dd></div></dl><div class="inline-actions" style="margin-top:1rem">${button('Ver execuções','go-executions')}${button('Executar agora','manual-execution',{primary:true,icon:'play'})}</div></article><article class="settings-card"><h2>Frescor atual</h2><p>Última atualização do dashboard: ${state.dashboardUpdatedAt}</p><div class="setting-row"><div><strong>Rotina de scrap</strong><p>EXE-20260815-0051</p></div>${badge('Concluído')}</div><div class="setting-row"><div><strong>Próxima janela</strong><p>15/08/2026 12:00</p></div>${badge('Agendada','info')}</div></article></section>`;
   if(state.settingsTab==='linhas'){
-    const layouts=[['LAY-A01-v2','A01','01/01/2026','Ativo'],['LAY-A02-v2','A02','01/01/2026','Ativo'],['LAY-A04-v1','A04','01/03/2026','Ativo'],['LAY-A05-v2','A05','01/01/2026','Ativo'],['LAY-C02-v1','C02','01/06/2026','Em validação']];
-    const rows=layouts.map((layout)=>`<tr><td><strong>${layout[0]}</strong></td><td>${layout[1]}</td><td>${model.transactions.filter((row)=>row.scrapLine===layout[1]).length} ocorrências</td><td>11 postos</td><td>${layout[2]}</td><td>${badge(layout[3])}</td><td>${button('Configurar mapa','configure-line-map',{small:true,id:layout[1]})}</td></tr>`).join('');
-    content=`<section class="settings-target-header"><div><h2>Linhas e mapas de risco</h2><p>Layouts versionados preservam a leitura histórica de setor e posto.</p></div>${button('Novo layout','new-line-layout',{primary:true,icon:'plus'})}</section>${tablePanel('Layouts vigentes',[{label:'Layout ID'},{label:'Linha'},{label:'Ocorrências'},{label:'Postos'},{label:'Vigência'},{label:'Status'},{label:'Ação'}],rows)}<article class="settings-card"><h2>Faixas do heatmap</h2><div class="risk-legend"><span class="low">Baixo risco</span><span class="moderate">Risco moderado</span><span class="critical">Risco crítico</span></div><p>Os limites e coordenadas são versionados por layout. A imagem real da linha continua como ativo de referência do projeto.</p></article>`;
+    const layouts=scrapLines.map((line,index)=>[`LAY-${line}-v${index < defaultScrapLines.length ? 1 : 'novo'}`,line,index < defaultScrapLines.length ? '01/01/2026' : 'Cadastro local',index < defaultScrapLines.length ? 'Ativo' : 'Pendente de dados']);
+    const rows=layouts.map((layout)=>`<tr><td><strong>${layout[0]}</strong></td><td>${layout[1]}</td><td>${model.transactions.filter((row)=>row.scrapLine===layout[1]).length} registros</td><td>11 postos</td><td>${layout[2]}</td><td>${badge(layout[3])}</td><td>${button('Configurar mapa','configure-line-map',{small:true,id:layout[1]})}</td></tr>`).join('');
+    content=`<section class="settings-target-header"><div><h2>Catálogo de linhas</h2><p>Cadastre linhas novas antes da chegada de registros; o seletor do Dashboard passa a reconhecer o código.</p></div>${button('Cadastrar linha','new-line-layout',{primary:true,icon:'plus'})}</section>${tablePanel('Linhas configuradas',[{label:'Layout ID'},{label:'Linha'},{label:'Registros'},{label:'Postos'},{label:'Vigência'},{label:'Status'},{label:'Ação'}],rows)}<article class="settings-card"><h2>Mapeamento operacional</h2><p>Setores, postos e coordenadas são versionados por linha. Linhas cadastradas sem registros ficam disponíveis para receber o próximo JSON, mas não entram em rankings até haver dados.</p></article>`;
   }
   if(state.settingsTab==='emails'){
     const rows=model.recipients.map((recipient)=>`<tr><td><strong>${recipient.name}</strong><small class="cell-stack">${recipient.id}</small></td><td>${recipient.email}</td><td>${recipient.group}</td><td>${recipient.scope}</td><td>${recipient.categories}</td><td>${badge(recipient.consent)}</td><td>${badge(recipient.status)}</td><td>${button('Editar','edit-recipient',{small:true,id:recipient.id})}</td></tr>`).join('');
@@ -1542,7 +1672,7 @@ function openTransaction(id) {
 function openComponent(id){
   const item=model.components.find((component)=>component.id===id);if(!item)return;
   const related=model.transactions.filter((row)=>row.partNumber===item.itemCode),qty=related.reduce((sum,row)=>sum+row.qty,0),cost=related.reduce((sum,row)=>sum+row.ifCost,0);
-  const body=`<div class="inline-actions">${badge(item.status)}${badge(item.productArea)}${badge(item.division)}</div><section class="detail-section"><h3>Identidade normalizada</h3><dl class="detail-list"><div><dt>Component ID</dt><dd>${item.id}</dd></div><div><dt>Código original</dt><dd>${item.itemCode}</dd></div><div><dt>Nome normalizado</dt><dd>${item.normalizedName}</dd></div><div><dt>Componente</dt><dd>${item.component}</dd></div><div><dt>Tipo</dt><dd>${item.itemType}</dd></div><div><dt>Origem</dt><dd>${item.source}</dd></div></dl></section><section class="detail-section"><h3>Aliases preservados</h3><div class="alias-list">${item.aliases.map((alias)=>`<span>${alias}</span>`).join('')}</div><p class="panel-description">Consolidar cria um vínculo normalizado; os valores recebidos permanecem rastreáveis.</p></section><section class="detail-section"><h3>Ocorrências relacionadas</h3><dl class="detail-list"><div><dt>Registros</dt><dd>${formatNumber(related.length)}</dd></div><div><dt>QTY SCRAP</dt><dd>${formatNumber(qty)} un.</dd></div><div><dt>IF Cost</dt><dd>${state.dashboardMasked?'US$ •••••':formatCurrency(cost)}</dd></div><div><dt>Última ocorrência</dt><dd>${item.lastOccurrence}</dd></div></dl>${relatedScrapList(related)}</section><section class="detail-section"><h3>Histórico</h3><ol class="timeline"><li>Código recebido do GERP<small>Origem preservada</small></li><li>Descrição normalizada<small>${item.updatedAt}</small></li><li>Status atual: ${item.status}<small>Versão vigente</small></li></ol></section>`;
+  const body=`<div class="inline-actions">${badge(item.status)}${badge(item.productArea)}${badge(item.division)}</div><section class="detail-section"><h3>Identidade normalizada</h3><dl class="detail-list"><div><dt>Component ID</dt><dd>${item.id}</dd></div><div><dt>Código original</dt><dd>${item.itemCode}</dd></div><div><dt>Nome normalizado</dt><dd>${item.normalizedName}</dd></div><div><dt>Componente</dt><dd>${item.component}</dd></div><div><dt>Tipo</dt><dd>${item.itemType}</dd></div><div><dt>Origem</dt><dd>${item.source}</dd></div></dl></section><section class="detail-section"><h3>Aliases preservados</h3><div class="alias-list">${item.aliases.map((alias)=>`<span>${alias}</span>`).join('')}</div><p class="panel-description">Consolidar cria um vínculo normalizado; os valores recebidos permanecem rastreáveis.</p></section><section class="detail-section"><h3>Registros relacionados</h3><dl class="detail-list"><div><dt>Registros</dt><dd>${formatNumber(related.length)}</dd></div><div><dt>QTY SCRAP</dt><dd>${formatNumber(qty)} un.</dd></div><div><dt>IF Cost</dt><dd>${state.dashboardMasked?'US$ •••••':formatCurrency(cost)}</dd></div><div><dt>Último registro</dt><dd>${item.lastOccurrence}</dd></div></dl>${relatedScrapList(related)}</section><section class="detail-section"><h3>Histórico</h3><ol class="timeline"><li>Código recebido do GERP<small>Origem preservada</small></li><li>Descrição normalizada<small>${item.updatedAt}</small></li><li>Status atual: ${item.status}<small>Versão vigente</small></li></ol></section>`;
   openOverlay(drawer(`${item.itemCode} · ${item.normalizedName}`,body,button('Consolidar alias','consolidate-alias',{id:item.id,primary:true})));
 }
 function openAction(id){
@@ -1586,7 +1716,7 @@ const tvPanels = [
 function tvKpi(label, value, detail = '', tone = '') {
   return `<article class="tv-kpi ${tone}"><span>${label}</span><strong>${value}</strong>${detail ? `<small>${detail}</small>` : ''}</article>`;
 }
-function tvHeader(panel) { return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${state.dashboardMetric === 'qty' ? panel.eyebrow.replace('IF Cost','QTY SCRAP').replace('dinheiro','unidades') : panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>${state.dashboardUpdatedAt}</strong><span>${icon('check')} API real · alertas/revisões: MOCK</span></div></header>`; }
+function tvHeader(panel) { const sourceStatus=window.dashboardApiConnected?'API real · alertas/revisões: MOCK':'Dados simulados';return `<header class="tv-panel-header"><div><span class="tv-eyebrow">${state.dashboardMetric === 'qty' ? panel.eyebrow.replace('IF Cost','QTY SCRAP').replace('dinheiro','unidades') : panel.eyebrow}</span><h1>${panel.title}</h1></div><div class="tv-freshness"><strong>${state.dashboardUpdatedAt}</strong><span>${icon(window.dashboardApiConnected?'check':'alert')} ${sourceStatus}</span></div></header>`; }
 function tvPanelContent(index) {
   const panel = tvPanels[index];
   const metric = state.dashboardMetric, masked = state.dashboardMasked && metric === 'usd';
@@ -1605,7 +1735,7 @@ function tvPanelContent(index) {
     const target = targetSeries.reduce((sum,value)=>sum+(value||0),0);
     const cards = metric === 'usd'
       ? `${tvKpi('IF Cost acumulado',metricDisplay(current),String(year))}${tvKpi(`Mesmo período ${previousYear}`,metricDisplay(previous),'Referência YoY')}${tvKpi(`Variação vs ${previousYear}`,formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Target acumulado',targetSeries.length ? metricDisplay(target) : '—',targetSeries.length ? 'Meta cadastrada' : 'Meta indisponível')}`
-      : `${tvKpi('QTY SCRAP acumulado',metricDisplay(current),String(year))}${tvKpi(`Mesmo período ${previousYear}`,metricDisplay(previous),'Referência YoY')}${tvKpi(`Variação vs ${previousYear}`,formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Ocorrências',formatNumber(model.transactions.length),'Registros navegáveis')}`;
+      : `${tvKpi('QTY SCRAP acumulado',metricDisplay(current),String(year))}${tvKpi(`Mesmo período ${previousYear}`,metricDisplay(previous),'Referência YoY')}${tvKpi(`Variação vs ${previousYear}`,formatPercentage(variation),'Menor é melhor',variation<=0?'success':'danger')}${tvKpi('Ocorrências',formatNumber(model.transactions.length),'Registros válidos')}`;
     return `${tvHeader(panel)}<div class="tv-kpi-grid">${cards}</div><div class="tv-main-grid"><article class="tv-card tv-chart-card"><h2>Evolução de ${metric==='usd'?'IF Cost':'QTY SCRAP'} — ${year} × ${previousYear}${targetSeries.length?' × Target':''}</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:String(year),previousLabel:String(previousYear),unit:metric,masked},330)}</article><article class="tv-card"><h2>Top 3 componentes afetados</h2>${barList(offenders.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article></div><div class="tv-summary-strip"><strong>${formatNumber(dashboardSpreadsheetSeries.actualQty.reduce((sum,value)=>sum+(value||0),0))}</strong> unidades de scrap <i></i><strong>${formatNumber(model.transactions.length)}</strong> transações <i></i><strong class="negative">MOCK</strong> alertas críticos</div>`;
   }
   if (index === 1) { const linesRank=dashboardAggregate(model.transactions,'scrapLine',metric,scale); const partsRank=dashboardAggregate(model.transactions,'partNumber',metric,scale); const defects=dashboardAggregate(model.transactions,'defect',metric,scale).slice(0,5); return `${tvHeader(panel)}<div class="tv-offender-grid"><article class="tv-card"><h2>Pareto de defeitos por ${metric==='usd'?'IF Cost':'QTY SCRAP'}</h2>${barList(defects.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article><article class="tv-card"><h2>${metric==='usd'?'IF Cost':'QTY SCRAP'} por linha</h2>${barList(linesRank.map(item=>({...item,display:metricDisplay(item.value,true)})))}</article></div><div class="tv-highlight-grid"><article class="tv-highlight"><span>Part Number mais crítico</span><strong>${partsRank[0]?.label||'—'}</strong><b>${metricDisplay(partsRank[0]?.value||0)}</b><small class="negative">Maior impacto acumulado</small></article><article class="tv-highlight"><span>Defeito mais crítico</span><strong>${defects[0]?.label||'—'}</strong><b>${current&&defects[0]?(defects[0].value/current*100).toLocaleString('pt-BR',{maximumFractionDigits:1}):0}%</b><small>do impacto acumulado</small></article></div>`; }
@@ -1613,17 +1743,60 @@ function tvPanelContent(index) {
   const achievement = targetSeries.length && current ? `${(targetSeries.reduce((sum,value)=>sum+(value||0),0)/current*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%` : '—';
   return `${tvHeader(panel)}<div class="tv-trend-layout"><article class="tv-card tv-chart-card"><h2>Evolução acumulada no ano</h2>${dashboardChart({kind:'monthly',labels:dashboardSpreadsheetSeries.months,actual:actualSeries,previous:previousSeries,target:targetSeries,actualLabel:String(year),previousLabel:String(previousYear),unit:metric,masked},430)}</article><aside class="tv-results"><h2>Resultado acumulado</h2>${tvKpi(String(previousYear),metricDisplay(previous))}${tvKpi(String(year),metricDisplay(current))}${tvKpi('Variação',formatPercentage(variation),'',variation<=0?'success':'danger')}${tvKpi(metric==='usd'?'Atingimento':'Registros',metric==='usd'?achievement:formatNumber(model.transactions.length))}</aside></div>`;
 }
+function tvFactoryContent() {
+  const filters = state.dashboardFilters;
+  const year = Number(filters.year);
+  const availableMonths = model.transactions.filter((row) => transactionYear(row) === year).map((row) => row.monthIndex ?? 0);
+  const latestMonthIndex = availableMonths.length ? Math.max(...availableMonths) : 0;
+  const currentRows = model.transactions.filter((row) => transactionYear(row) === year &&
+    (state.tvFactoryPeriod === 'year' || (row.monthIndex ?? 0) === latestMonthIndex) &&
+    dashboardRowMatchesDimensions(row, filters));
+  const previousRows = model.transactions.filter((row) => {
+    const sameDimension = dashboardRowMatchesDimensions(row, filters);
+    if (state.tvFactoryPeriod === 'year') return transactionYear(row) === year - 1 && sameDimension;
+    if (latestMonthIndex > 0) return transactionYear(row) === year && (row.monthIndex ?? 0) === latestMonthIndex - 1 && sameDimension;
+    return transactionYear(row) === year - 1 && (row.monthIndex ?? 0) === 11 && sameDimension;
+  });
+  const rankLines = (rows) => [...rows.reduce((map, row) => {
+    const label = row.scrapLine || 'Não informado';
+    const current = map.get(label) || { label, count: 0, qty: 0 };
+    current.count += 1; current.qty += row.qty || 0; map.set(label, current); return map;
+  }, new Map()).values()].sort((a, b) => b.count - a.count || b.qty - a.qty);
+  const currentRank = rankLines(currentRows);
+  const previousRank = new Map(rankLines(previousRows).map((item) => [item.label, item]));
+  const maxCount = Math.max(1, ...currentRank.map((item) => item.count));
+  const hasPrevious = previousRows.length > 0;
+  const totalOccurrences = currentRows.length;
+  const periodLabel = state.tvFactoryPeriod === 'year' ? String(year) : `${dashboardSpreadsheetSeries.months[latestMonthIndex]}/${year}`;
+  const contextParts = [
+    ...dashboardFilterValues(filters.product),
+    ...dashboardFilterValues(filters.scrapLine, 'Todas'),
+    ...dashboardFilterValues(filters.division),
+  ];
+  const factoryRows = currentRank.map((item, index) => {
+    const before = previousRank.get(item.label)?.count;
+    const variation = before ? (item.count / before - 1) * 100 : null;
+    return `<article class="tv-factory-row"><span class="tv-factory-position">${index + 1}</span><strong>${item.label}</strong><div class="tv-factory-bar"><i style="width:${item.count / maxCount * 100}%"></i></div><b>${formatNumber(item.count)}</b><small>${variation === null ? '—' : formatPercentage(variation)}</small></article>`;
+  }).join('');
+  const sectorRank = [...currentRows.reduce((map, row) => map.set(row.sector || 'Não informado', (map.get(row.sector || 'Não informado') || 0) + 1), new Map()).entries()]
+    .map(([label, value]) => ({ label, value, display: `${formatNumber(value)} ocorrências` })).sort((a, b) => b.value - a.value).slice(0, 5);
+  const cards = `${tvKpi('Ocorrências',formatNumber(totalOccurrences),periodLabel)}${tvKpi('Linha líder',currentRank[0]?.label || '—',currentRank[0] ? `${formatNumber(currentRank[0].count)} ocorrências` : 'Sem dados')}${tvKpi('Linhas monitoradas',formatNumber(currentRank.length),contextParts.length ? contextParts.join(' · ') : 'Consolidado geral')}${tvKpi('Período anterior',hasPrevious ? formatNumber(previousRows.length) : '—',hasPrevious ? 'Ocorrências comparáveis' : 'Histórico por linha indisponível')}`;
+  return `${tvHeader({title:'Ranking de ocorrências por linha',eyebrow:'Modo Fábrica'})}<div class="tv-factory-toolbar"><div class="segmented-control" role="group" aria-label="Período do ranking"><button class="${state.tvFactoryPeriod === 'month' ? 'active' : ''}" data-action="tv-factory-period" data-id="month">Mês</button><button class="${state.tvFactoryPeriod === 'year' ? 'active' : ''}" data-action="tv-factory-period" data-id="year">Ano</button></div><span>${hasPrevious ? 'Atual × anterior' : 'Comparação aguardando histórico detalhado'}</span></div><div class="tv-kpi-grid">${cards}</div><div class="tv-factory-grid"><section class="tv-card tv-factory-ranking"><header><h2>Linhas de montagem</h2><div><span>Ocorrências</span><span>Variação</span></div></header>${factoryRows || '<div class="empty-state">Nenhuma ocorrência no recorte.</div>'}</section><aside class="tv-card"><h2>Setores com mais ocorrências</h2>${sectorRank.length ? barList(sectorRank) : '<div class="empty-state">Sem dados por setor.</div>'}</aside></div>`;
+}
 function renderTvMode(resetProgress = true) {
   const root = $('#tv-mode'); pendingCharts = [];
-  root.innerHTML = `<div class="tv-stage"><div class="tv-panel" data-panel="${state.tvPanel}">${tvPanelContent(state.tvPanel)}</div><footer class="tv-footer"><span>HANARO · Material Scrap / ${state.dashboardMetric==='usd'?'IF Cost':'QTY SCRAP'}</span><span>Atualizado ${state.dashboardUpdatedAt} · rotina a cada 2 horas</span></footer><div class="tv-controls visible" aria-label="Controles do Modo TV"><button data-action="tv-prev" aria-label="Painel anterior">${icon('chevronLeft')}</button><button data-action="tv-pause" aria-label="${state.tvPaused?'Continuar':'Pausar'} rotação">${icon(state.tvPaused?'play':'pause')}<span>${state.tvPaused?'Continuar':'Pausar'}</span></button><button data-action="tv-next" aria-label="Próximo painel">${icon('chevronRight')}</button><button data-action="tv-toggle-rotation" class="tv-text-control">${state.tvRotation?'Rotação automática':'Visão única'}</button><label class="tv-duration-control"><span>Intervalo</span><select id="tv-duration"><option value="10" ${state.tvDuration===10?'selected':''}>10s</option><option value="15" ${state.tvDuration===15?'selected':''}>15s</option><option value="30" ${state.tvDuration===30?'selected':''}>30s</option><option value="60" ${state.tvDuration===60?'selected':''}>60s</option></select></label><button data-action="tv-fullscreen" aria-label="Tela cheia">${icon('fullscreen')}<span>Tela cheia</span></button><button data-action="exit-tv" aria-label="Sair do Modo TV">${icon('x')}<span>Sair</span></button></div><div class="tv-position"><span>${state.tvPanel + 1} / ${tvPanels.length}</span><div class="tv-dots">${tvPanels.map((_,i)=>`<i class="${i===state.tvPanel?'active':''}"></i>`).join('')}</div></div><div class="tv-progress ${state.tvPaused || !state.tvRotation ? 'paused' : ''}" style="--tv-duration:${state.tvDuration}s"><i></i></div></div>`;
+  const executive = state.tvView === 'executive';
+  const content = executive ? tvPanelContent(state.tvPanel) : tvFactoryContent();
+  const executiveControls = executive ? `<button data-action="tv-prev" aria-label="Painel anterior">${icon('chevronLeft')}</button><button data-action="tv-pause" aria-label="${state.tvPaused?'Continuar':'Pausar'} rotação">${icon(state.tvPaused?'play':'pause')}<span>${state.tvPaused?'Continuar':'Pausar'}</span></button><button data-action="tv-next" aria-label="Próximo painel">${icon('chevronRight')}</button><button data-action="tv-toggle-rotation" class="tv-text-control">${state.tvRotation?'Rotação automática':'Visão única'}</button><label class="tv-duration-control"><span>Intervalo</span><select id="tv-duration"><option value="10" ${state.tvDuration===10?'selected':''}>10s</option><option value="15" ${state.tvDuration===15?'selected':''}>15s</option><option value="30" ${state.tvDuration===30?'selected':''}>30s</option><option value="60" ${state.tvDuration===60?'selected':''}>60s</option></select></label>` : '';
+  root.innerHTML = `<div class="tv-stage"><div class="tv-panel" data-panel="${executive ? state.tvPanel : 'factory'}">${content}</div><footer class="tv-footer"><span>HANARO · ${executive ? `Material Scrap / ${state.dashboardMetric==='usd'?'IF Cost':'QTY SCRAP'}` : 'Modo Fábrica / Ocorrências'}</span><span>Atualizado ${state.dashboardUpdatedAt} · rotina a cada 2 horas</span></footer><div class="tv-controls visible" aria-label="Controles do Modo TV"><div class="tv-view-switch"><button class="${executive ? 'active' : ''}" data-action="tv-view" data-id="executive">Executivo</button><button class="${!executive ? 'active' : ''}" data-action="tv-view" data-id="factory">Fábrica</button></div>${executiveControls}<button data-action="tv-fullscreen" aria-label="Tela cheia">${icon('fullscreen')}<span>Tela cheia</span></button><button data-action="exit-tv" aria-label="Sair do Modo TV">${icon('x')}<span>Sair</span></button></div>${executive ? `<div class="tv-position"><span>${state.tvPanel + 1} / ${tvPanels.length}</span><div class="tv-dots">${tvPanels.map((_,i)=>`<i class="${i===state.tvPanel?'active':''}"></i>`).join('')}</div></div><div class="tv-progress ${state.tvPaused || !state.tvRotation ? 'paused' : ''}" style="--tv-duration:${state.tvDuration}s"><i></i></div>` : ''}</div>`;
   applyI18n(root);
   initCharts(); showTvControls();
   if (resetProgress) restartTvTimer();
 }
-function restartTvTimer() { clearTimeout(tvTimer); if (!state.tvActive || state.tvPaused || !state.tvRotation) return; tvTimer = setTimeout(() => changeTvPanel(1), state.tvDuration * 1000); }
-function changeTvPanel(direction) { state.tvPanel = (state.tvPanel + direction + tvPanels.length) % tvPanels.length; renderTvMode(); }
+function restartTvTimer() { clearTimeout(tvTimer); if (!state.tvActive || state.tvView !== 'executive' || state.tvPaused || !state.tvRotation) return; tvTimer = setTimeout(() => changeTvPanel(1), state.tvDuration * 1000); }
+function changeTvPanel(direction) { if(state.tvView !== 'executive')return; state.tvPanel = (state.tvPanel + direction + tvPanels.length) % tvPanels.length; renderTvMode(); }
 function showTvControls() { const controls = $('.tv-controls'); if (!controls) return; controls.classList.add('visible'); clearTimeout(tvControlsTimer); tvControlsTimer = setTimeout(() => controls.classList.remove('visible'), 4000); }
-function enterTvMode() { if (state.route !== 'dashboard') return; state.tvActive = true; state.tvPanel = 0; state.tvPaused = false; state.tvRotation = true; document.body.classList.add('tv-active'); $('#tv-mode').setAttribute('aria-hidden','false'); renderTvMode(); }
+function enterTvMode() { if (state.route !== 'dashboard') return; state.tvActive = true; state.tvView = 'executive'; state.tvPanel = 0; state.tvPaused = false; state.tvRotation = true; document.body.classList.add('tv-active'); $('#tv-mode').setAttribute('aria-hidden','false'); renderTvMode(); }
 function exitTvMode() { clearTimeout(tvTimer); clearTimeout(tvControlsTimer); state.tvActive = false; document.body.classList.remove('tv-active'); $('#tv-mode').setAttribute('aria-hidden','true'); $('#tv-mode').innerHTML=''; if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); renderPage(); $('#tv-mode-trigger')?.focus(); }
 function toggleTvPause() { state.tvPaused = !state.tvPaused; renderTvMode(); }
 
@@ -1635,6 +1808,15 @@ async function handleAction(action,el){
   if(action==='toggle-choice'){el.classList.toggle('selected');el.setAttribute('aria-pressed',String(el.classList.contains('selected')));return;}
   if(action==='enter-tv')return enterTvMode();
   if(action==='exit-tv')return exitTvMode();
+  if(action==='tv-view'){
+    if(!['executive','factory'].includes(id))return;
+    state.tvView=id;state.tvPanel=0;state.tvPaused=false;state.tvRotation=id==='executive';
+    return renderTvMode();
+  }
+  if(action==='tv-factory-period'){
+    if(!['month','year'].includes(id))return;
+    state.tvFactoryPeriod=id;return renderTvMode(false);
+  }
   if(action==='tv-prev')return changeTvPanel(-1);
   if(action==='tv-next')return changeTvPanel(1);
   if(action==='tv-pause')return toggleTvPause();
@@ -1643,29 +1825,37 @@ async function handleAction(action,el){
   if(action==='support')return showToast('Central de suporte simulada. Nenhum chamado real foi enviado.');
   if(action==='profile')return showToast('O perfil do protótipo está em modo de demonstração.');
   if(action==='notifications'){const alert=model.alerts.find((item)=>item.status==='Novo')||model.alerts[0];return alert?openAlert(alert.id):showToast('Nenhum alerta disponível.');}
+  if(action==='go-scrap'){state.scrapView='list';return navigateTo('scrap');}
   if(action==='go-reports'||action==='new-report'){state.reportTab='construir';return navigateTo('relatorios');}
   if(action.startsWith('export')||action==='generate-pptx'){el.classList.add('spinning');el.disabled=true;await delay(650);el.classList.remove('spinning');el.disabled=false;return showToast(action==='generate-pptx'?'PPTX simulado preparado a partir do template Rev04.':'Arquivo fictício preparado para demonstração.');}
   if(action==='dashboard-metric'){state.dashboardMetric=id;renderPage();return showToast(id==='usd'?'Dashboard alterado para valores em dólar.':'Dashboard alterado para QTY SCRAP.');}
   if(action==='dashboard-mask'){state.dashboardMasked=!state.dashboardMasked;renderPage();return showToast(state.dashboardMasked?'Valores monetários ocultados.':'Valores monetários exibidos.');}
   if(action==='dashboard-analysis'){state.dashboardAnalysis=id;renderPage();return;}
   if(action==='dashboard-remove-filter'){
-    const defaults={product:'Todos',scrapLine:'Todas',component:'Todos',partNumber:'Todos'};
+    const defaults={product:[],scrapLine:[],division:[],week:[],component:'Todos',partNumber:'Todos'};
     if(Object.prototype.hasOwnProperty.call(defaults,el.dataset.key))state.dashboardFilters[el.dataset.key]=defaults[el.dataset.key];
     renderPage();return;
   }
+  if(action==='dashboard-multi-clear'){
+    if(['product','scrapLine','division','week'].includes(id))state.dashboardFilters[id]=[];
+    renderPage();
+    return showToast('Filtro alterado para todos.');
+  }
+  if(action==='dashboard-multi-apply'){
+    if(!['product','scrapLine','division','week'].includes(id))return;
+    const details=el.closest('.dashboard-multi');
+    state.dashboardFilters[id]=$$('input[type="checkbox"]:checked',details).map((input)=>input.value);
+    renderPage();
+    return showToast('Seleção aplicada.');
+  }
   if(action==='dashboard-risk-explore'){setExplorationContext({scrapLine:id,sector:el.dataset.sector||null,stationCode:el.dataset.station||null,component:null,partNumber:null,transactionId:null},'Mapa de risco');state.scrapView='list';return navigateTo('scrap');}
-  if(action==='dashboard-more-filters'){
-    const filters=state.dashboardFilters;
-    return openOverlay(modal('Mais filtros do Dashboard',`<p class="panel-description">Estes filtros refinam todos os indicadores e gráficos compatíveis.</p><div class="form-grid" style="margin-top:1rem">${field('Componente','modal-dashboard-component',['Todos',...components],filters.component)+field('Part Number','modal-dashboard-part-number',['Todos',...partNumbers],filters.partNumber)}</div>`,`${button('Cancelar','close-overlay')}${button('Aplicar filtros','dashboard-apply-more-filters',{primary:true})}`));
-  }
-  if(action==='dashboard-apply-more-filters'){
-    state.dashboardFilters.component=$('#modal-dashboard-component')?.value||'Todos';
-    state.dashboardFilters.partNumber=$('#modal-dashboard-part-number')?.value||'Todos';
-    closeOverlay();renderPage();return showToast('Filtros adicionais aplicados.');
-  }
   if(action==='refresh-dashboard'){el.classList.add('spinning');el.disabled=true;$('#sync-state').textContent='Atualizando...';await delay(600);const now=new Date(),time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});state.dashboardUpdatedAt=`${now.toLocaleDateString('pt-BR')} ${time}`;el.disabled=false;el.classList.remove('spinning');$('#sync-state').textContent=`Atualizado às ${time}`;renderPage();return showToast('Dados atualizados.');}
-  if(action==='clear-dashboard'){const year=Number(window.dashboardApiYears?.at(-1)||2026);state.dashboardFactor=1;state.dashboardFilters={year:String(year),period:'Acumulado no ano',compare:`Mesmo período de ${year-1}`,product:'Todos',scrapLine:'Todas',component:'Todos',partNumber:'Todos'};renderPage();return showToast('Filtros limpos.');}
-  if(action==='dashboard-explore'){setExplorationContext({component:id,partNumber:state.dashboardFilters.partNumber==='Todos'?null:state.dashboardFilters.partNumber,scrapLine:state.dashboardFilters.scrapLine==='Todas'?null:state.dashboardFilters.scrapLine,transactionId:null,alertId:null,executionId:null},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
+  if(action==='clear-dashboard-selection'){state.dashboardFilters={...state.dashboardFilters,product:[],scrapLine:[],division:[],week:[],component:'Todos',partNumber:'Todos'};renderPage();return showToast('Seleção limpa.');}
+  if(action==='clear-scrap-filters'){state.scrapFilters={date:'Todas as datas',productArea:'Todos',division:'Todas',scrapLine:'Todas',component:'Todos',modelCode:'Todos',reviewStatus:'Todos'};state.scrapAdvancedFilters={organizationCode:'Todas',accountAlias:'Todos',sector:'Todos',stationCode:'Todos',subinventoryGroup:'Todos',subinventory:'Todos',warehouseMarket:'Todos',receiptDepartment:'Todos',partNumber:'Todos',processingStatus:'Todos',reportInclusion:'Todos'};state.scrapPage=1;renderPage();return showToast('Seleção de filtros limpa.');}
+  if(action==='clear-component-filters'){state.componentFilters={productArea:'Todos',division:'Todas',itemType:'Todos',status:'Todos'};renderPage();return showToast('Seleção de filtros limpa.');}
+  if(action==='clear-action-filters'){state.actionFilters={period:'Agosto/2026',productArea:'Todos',scrapLine:'Todas',owner:'Todos',category4m:'Todos',risk:'Todos',status:'Todos',overdue:'Todos'};renderPage();return showToast('Seleção de filtros limpa.');}
+  if(action==='clear-dashboard'){const year=Number(window.dashboardApiYears?.at(-1)||2026);state.dashboardFactor=1;state.dashboardFilters={year:String(year),period:'Acumulado no ano',product:[],scrapLine:[],division:[],week:[],component:'Todos',partNumber:'Todos'};renderPage();return showToast('Filtros limpos.');}
+  if(action==='dashboard-explore'){setExplorationContext({component:id,partNumber:state.dashboardFilters.partNumber==='Todos'?null:state.dashboardFilters.partNumber,scrapLine:dashboardSingleFilterValue(state.dashboardFilters.scrapLine,'Todas'),sector:null,transactionId:null,alertId:null,executionId:null},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-explore'){const row=model.transactions.find(t=>t.id===id);if(!row)return;setExplorationContext({productArea:row.productArea,component:row.component,modelCode:row.modelCode,sector:row.sector,stationCode:row.stationCode,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');state.scrapView='list';return navigateTo('scrap');}
   if(action==='dashboard-row-review'){const row=model.transactions.find(t=>t.id===id);if(!row)return;state.selectedScrapIds=[row.id];state.activeReviewId=row.id;state.scrapView='review';setExplorationContext({component:row.component,partNumber:row.partNumber,scrapLine:row.scrapLine,transactionId:row.id},'Dashboard');navigateTo('scrap');history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(row.id)}`);return;}
   if(action==='page-prev'){state.scrapPage--;return renderPage();} if(action==='page-next'){state.scrapPage++;return renderPage();}
@@ -1681,22 +1871,43 @@ async function handleAction(action,el){
   if(action==='advance-action'){const item=model.actions.find((entry)=>entry.id===id),flow=['Planejada','Em andamento','Aguardando eficácia','Validada'],current=Math.max(0,flow.indexOf(item.status));item.status=flow[Math.min(flow.length-1,current+1)];item.progress=[10,55,90,100][flow.indexOf(item.status)];addAudit('Avançou status do plano de ação','Action',item.id,flow[current],item.status);closeOverlay();renderPage({preserveScroll:true});return showToast(`Plano atualizado para ${item.status}.`);}
   if(action==='new-action')return openOverlay(modal('Nova ação',`<div class="form-grid"><div class="field full"><label>Título</label><input class="control" id="new-action-title"></div>${field('Produto / área','new-action-product',productAreas,'TV')}${field('Linha','new-action-line',scrapLines,'A05')}<div class="field"><label>Responsável</label><input class="control" id="new-action-owner" value="Analista de Qualidade"></div><div class="field"><label>Prazo</label><input class="control" id="new-action-due" value="31/08/2026"></div>${field('Risco','new-action-risk',['Médio','Alto','Crítico'],'Médio')}${field('4M','new-action-4m',['Machine','Method','Material','Man'],'Method')}</div>`,`${button('Cancelar','close-overlay')}${button('Criar ação','confirm-new-action',{primary:true,icon:'check'})}`));
   if(action==='confirm-new-action'){const title=$('#new-action-title')?.value.trim();if(!title)return showToast('Informe o título da ação.','error');const next=model.actions.length+1;model.actions.unshift({id:`ACT-2026-${String(next).padStart(3,'0')}`,title,lineCode:$('#new-action-line').value,stationCode:'P01',productArea:$('#new-action-product').value,owner:$('#new-action-owner').value,ownerArea:'Qualidade',category4m:$('#new-action-4m').value,risk:$('#new-action-risk').value,dueDate:$('#new-action-due').value,status:'Planejada',progress:0,evidenceCount:0,transactionIds:[],ifCost:0,qty:0,reportIncluded:false,description:'Ação criada no protótipo para detalhamento posterior.'});closeOverlay();renderPage();return showToast('Plano de ação criado.');}
-  if(action==='more-filters'){const f=state.scrapAdvancedFilters,stationCodes=[...new Set(model.transactions.map((row)=>row.stationCode))];return openOverlay(modal('Mais filtros da Base de Scrap',`<p class="panel-description">Refine dimensões industriais, origem contábil e curadoria do relatório.</p><div class="form-grid" style="margin-top:1rem">${field('Organização','modal-organization',['Todas',...organizationCodes],f.organizationCode)+field('Conta / alias','modal-account-alias',['Todos',...aliases],f.accountAlias)+field('Componente','modal-component',['Todos',...components],f.component)+field('Modelo','modal-model-code',['Todos',...modelCodes],f.modelCode)+field('Setor','modal-sector',['Todos',...sectors],f.sector)+field('Posto','modal-station-code',['Todos',...stationCodes],f.stationCode)+field('Grupo de subinventário','modal-subinventory-group',['Todos',...subinventoryGroups],f.subinventoryGroup)+field('Subinventário','modal-subinventory',['Todos',...subinventories],f.subinventory)+field('Mercado do armazém','modal-warehouse-market',['Todos',...warehouseMarkets],f.warehouseMarket)+field('Departamento de recebimento','modal-receipt-department',['Todos',...receiptDepartments],f.receiptDepartment)+field('Part Number','modal-part-number',['Todos',...partNumbers],f.partNumber)+field('Inclusão em relatório','modal-report-inclusion',['Todos','Incluído','Não incluído'],f.reportInclusion)}</div>`,`${button('Cancelar','close-overlay')}${button('Limpar filtros','clear-more-filters')}${button('Aplicar filtros','apply-more-filters',{primary:true})}`));}
-  if(action==='apply-more-filters'){state.scrapAdvancedFilters={organizationCode:$('#modal-organization')?.value||'Todas',accountAlias:$('#modal-account-alias')?.value||'Todos',component:$('#modal-component')?.value||'Todos',modelCode:$('#modal-model-code')?.value||'Todos',sector:$('#modal-sector')?.value||'Todos',stationCode:$('#modal-station-code')?.value||'Todos',subinventoryGroup:$('#modal-subinventory-group')?.value||'Todos',subinventory:$('#modal-subinventory')?.value||'Todos',warehouseMarket:$('#modal-warehouse-market')?.value||'Todos',receiptDepartment:$('#modal-receipt-department')?.value||'Todos',partNumber:$('#modal-part-number')?.value||'Todos',reportInclusion:$('#modal-report-inclusion')?.value||'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros avançados aplicados.');}
-  if(action==='clear-more-filters'){state.scrapAdvancedFilters={organizationCode:'Todas',accountAlias:'Todos',component:'Todos',modelCode:'Todos',sector:'Todos',stationCode:'Todos',subinventoryGroup:'Todos',subinventory:'Todos',warehouseMarket:'Todos',receiptDepartment:'Todos',partNumber:'Todos',reportInclusion:'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros limpos.');}
+  if(action==='more-filters'){const f=state.scrapAdvancedFilters,stationCodes=[...new Set(model.transactions.map((row)=>row.stationCode))];return openOverlay(modal('Mais filtros da Base de Scrap',`<p class="panel-description">Refine origem, localização industrial e estado técnico dos registros.</p><div class="form-grid" style="margin-top:1rem">${field('Organização','modal-organization',['Todas',...organizationCodes],f.organizationCode)+field('Conta / alias','modal-account-alias',['Todos',...aliases],f.accountAlias)+field('Setor','modal-sector',['Todos',...sectors],f.sector)+field('Posto','modal-station-code',['Todos',...stationCodes],f.stationCode)+field('Grupo de subinventário','modal-subinventory-group',['Todos',...subinventoryGroups],f.subinventoryGroup)+field('Subinventário','modal-subinventory',['Todos',...subinventories],f.subinventory)+field('Mercado do armazém','modal-warehouse-market',['Todos',...warehouseMarkets],f.warehouseMarket)+field('Departamento de recebimento','modal-receipt-department',['Todos',...receiptDepartments],f.receiptDepartment)+field('Part Number','modal-part-number',['Todos',...partNumbers],f.partNumber)+field('Processamento','modal-processing-status',['Todos','Validado','Rejeitado','Pendente'],f.processingStatus)+field('Inclusão em relatório','modal-report-inclusion',['Todos','Incluído','Não incluído'],f.reportInclusion)}</div>`,`${button('Cancelar','close-overlay')}${button('Limpar filtros','clear-more-filters')}${button('Aplicar filtros','apply-more-filters',{primary:true})}`));}
+  if(action==='apply-more-filters'){state.scrapAdvancedFilters={organizationCode:$('#modal-organization')?.value||'Todas',accountAlias:$('#modal-account-alias')?.value||'Todos',sector:$('#modal-sector')?.value||'Todos',stationCode:$('#modal-station-code')?.value||'Todos',subinventoryGroup:$('#modal-subinventory-group')?.value||'Todos',subinventory:$('#modal-subinventory')?.value||'Todos',warehouseMarket:$('#modal-warehouse-market')?.value||'Todos',receiptDepartment:$('#modal-receipt-department')?.value||'Todos',partNumber:$('#modal-part-number')?.value||'Todos',processingStatus:$('#modal-processing-status')?.value||'Todos',reportInclusion:$('#modal-report-inclusion')?.value||'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros avançados aplicados.');}
+  if(action==='clear-more-filters'){state.scrapAdvancedFilters={organizationCode:'Todas',accountAlias:'Todos',sector:'Todos',stationCode:'Todos',subinventoryGroup:'Todos',subinventory:'Todos',warehouseMarket:'Todos',receiptDepartment:'Todos',partNumber:'Todos',processingStatus:'Todos',reportInclusion:'Todos'};closeOverlay();state.scrapPage=1;renderPage();return showToast('Filtros limpos.');}
   if(action==='drill-part'){setExplorationContext({partNumber:id},state.context.source||'Explorador');renderPage();return showToast(`Exploração aprofundada em ${id}.`);}
+  if(action==='drill-component'){setExplorationContext({component:id,partNumber:null},state.context.source||'Explorador');state.scrapPage=1;renderPage();return showToast(`Componente ${id} aplicado ao recorte.`);}
   if(action==='clear-context'){state.context[el.dataset.key]=null;state.scrapPage=1;renderPage();return;}
   if(action==='clear-all-context'){state.context={source:null,productArea:null,component:null,modelCode:null,sector:null,stationCode:null,partNumber:null,scrapLine:null,transactionId:null,alertId:null,executionId:null};state.scrapPage=1;renderPage();return;}
   if(action==='toggle-scrap'){state.selectedScrapIds=state.selectedScrapIds.includes(id)?state.selectedScrapIds.filter(value=>value!==id):[...state.selectedScrapIds,id];return renderPage();}
   if(action==='select-visible-scrap'){const ids=filteredTransactions().slice((state.scrapPage-1)*state.scrapPageSize,state.scrapPage*state.scrapPageSize).map(row=>row.id);const allSelected=ids.every(value=>state.selectedScrapIds.includes(value));state.selectedScrapIds=allSelected?state.selectedScrapIds.filter(value=>!ids.includes(value)):[...new Set([...state.selectedScrapIds,...ids])];return renderPage();}
   if(action==='clear-scrap-selection'){state.selectedScrapIds=[];return renderPage();}
-  if(action==='review-one'){closeOverlay();state.selectedScrapIds=[id];state.activeReviewId=id;if(state.route==='scrap'&&state.scrapView==='list')state.scrapListScroll=$('#main-canvas')?.scrollTop||0;state.scrapView='review';if(state.route!=='scrap')navigateTo('scrap');else renderPage();history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(id)}`);return;}
-  if(action==='review-selected'){if(!state.selectedScrapIds.length)return showToast('Selecione ao menos um registro.','error');state.scrapListScroll=$('#main-canvas')?.scrollTop||0;state.activeReviewId=state.selectedScrapIds[0];state.scrapView='review';history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(state.activeReviewId)}`);return renderPage();}
+  if(action==='review-one'){closeOverlay();state.selectedScrapIds=[id];state.activeReviewId=id;state.reviewStep=1;state.reviewApplyAll=false;state.reviewSelectionSearch='';state.reviewSelectionStatus='Todos';if(state.route==='scrap'&&state.scrapView==='list')state.scrapListScroll=$('#main-canvas')?.scrollTop||0;state.scrapView='review';if(state.route!=='scrap')navigateTo('scrap');else renderPage();history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(id)}`);return;}
+  if(action==='review-selected'){if(!state.selectedScrapIds.length)return showToast('Selecione ao menos um registro.','error');state.scrapListScroll=$('#main-canvas')?.scrollTop||0;state.activeReviewId=state.selectedScrapIds[0];state.reviewStep=1;state.reviewApplyAll=state.selectedScrapIds.length>1;state.reviewSelectionSearch='';state.reviewSelectionStatus='Todos';state.scrapView='review';history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(state.activeReviewId)}`);return renderPage();}
   if(action==='back-scrap'){syncScrapReview();state.scrapView='list';state.pendingScrollTop=state.scrapListScroll;history.replaceState(null,'','#scrap');return renderPage();}
   if(action==='select-review-item'){syncScrapReview();state.activeReviewId=id;history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(id)}`);return renderPage();}
+  if(action==='review-step'){syncScrapReview();state.reviewStep=Math.min(4,Math.max(1,Number(id)||1));return renderPage();}
+  if(action==='toggle-review-apply-all'){syncScrapReview();state.reviewApplyAll=!state.reviewApplyAll;return renderPage();}
   if(action==='toggle-review-4m'){syncScrapReview();const row=model.transactions.find(item=>item.id===state.activeReviewId),value=el.dataset.value;if(!row)return;row.review.classification4m=row.review.classification4m.includes(value)?row.review.classification4m.filter(item=>item!==value):[...row.review.classification4m,value];return renderPage();}
   if(action==='save-scrap-review'){const row=model.transactions.find(item=>item.id===state.activeReviewId),before=row.review.status;syncScrapReview();row.review.status='Em revisão';addAudit('Salvou justificativa de scrap','Transaction',row.id,before,'Em revisão');renderPage();return showToast('Rascunho da revisão salvo.');}
-  if(action==='conclude-scrap-review'){syncScrapReview();const source=model.transactions.find(item=>item.id===state.activeReviewId);const missing=[];if(!source.review.category||source.review.category==='Selecione...')missing.push('categoria');if(!source.review.reason.trim())missing.push('justificativa');if(!source.review.rootCause.trim())missing.push('causa raiz');if(!source.review.responsible.trim())missing.push('responsável');if(missing.length)return showToast(`Preencha antes de concluir: ${missing.join(', ')}.`,'error');const applyAll=$('#review-apply-all')?.checked??false;const targets=applyAll?model.transactions.filter(item=>state.selectedScrapIds.includes(item.id)):[source];const mixed=new Set(targets.map(item=>`${item.component}|${item.scrapLine}`)).size>1;if(targets.length>1&&!window.confirm(`Aplicar a mesma revisão a ${targets.length} registros${mixed?' de componentes ou linhas diferentes':''}?`))return;targets.forEach(item=>{const before=item.review.status;if(item!==source)item.review={...source.review,classification4m:[...source.review.classification4m],evidence:[...source.review.evidence]};item.review.status='Justificado';addAudit('Concluiu revisão e justificativa de scrap','Transaction',item.id,before,'Justificado');});const remaining=state.selectedScrapIds.filter(value=>!targets.some(item=>item.id===value));state.selectedScrapIds=remaining;if(remaining.length){state.activeReviewId=remaining[0];history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(state.activeReviewId)}`);renderPage();}else{state.scrapView='list';state.pendingScrollTop=state.scrapListScroll;history.replaceState(null,'','#scrap');renderPage();}return showToast(`${targets.length} registro${targets.length>1?'s':''} justificado${targets.length>1?'s':''} e ${targets.length>1?'disponíveis':'disponível'} para relatório.`);}
+  if(action==='conclude-scrap-review'){
+    syncScrapReview();
+    const source=model.transactions.find(item=>item.id===state.activeReviewId),missing=[];
+    if(!source.review.category||source.review.category==='Selecione...')missing.push('categoria');
+    if(!source.review.reason.trim())missing.push('justificativa');
+    if(!source.review.rootCause.trim())missing.push('causa raiz');
+    if(!source.review.responsible.trim())missing.push('responsável');
+    if(missing.length){state.reviewStep=missing.some((item)=>item!=='causa raiz')?1:2;renderPage();return showToast(`Preencha antes de concluir: ${missing.join(', ')}.`,'error');}
+    const applyAll=state.reviewApplyAll&&state.selectedScrapIds.length>1;
+    const targets=applyAll?model.transactions.filter(item=>state.selectedScrapIds.includes(item.id)):[source];
+    const mixed=new Set(targets.map(item=>`${item.component}|${item.scrapLine}`)).size>1;
+    if(targets.length>1&&!window.confirm(`Aplicar o modelo de revisão a ${targets.length} registros${mixed?' de componentes ou linhas diferentes':''}? Dados do scrap e evidências individuais serão preservados.`))return;
+    targets.forEach(item=>{const before=item.review.status;if(item!==source)item.review=applyReviewTemplate(source.review,item.review);item.review.status='Justificado';addAudit('Concluiu revisão e justificativa de scrap','Transaction',item.id,before,'Justificado');});
+    const remaining=state.selectedScrapIds.filter(value=>!targets.some(item=>item.id===value));
+    state.selectedScrapIds=remaining;
+    if(remaining.length){state.activeReviewId=remaining[0];state.reviewApplyAll=remaining.length>1;state.reviewStep=1;history.replaceState(null,'',`#scrap/revisar/${encodeURIComponent(state.activeReviewId)}`);renderPage();}
+    else{state.scrapView='list';state.pendingScrollTop=state.scrapListScroll;history.replaceState(null,'','#scrap');renderPage();}
+    return showToast(`${targets.length} registro${targets.length>1?'s':''} justificado${targets.length>1?'s':''} e ${targets.length>1?'disponíveis':'disponível'} para relatório.`);
+  }
   if(action==='create-review-plan'){syncScrapReview();const row=model.transactions.find(item=>item.id===state.activeReviewId);return openOverlay(modal('Criar ou vincular plano de ação',`<p class="panel-description">O plano herda causa, responsável e origem da revisão ${row.id}.</p><div class="form-grid" style="margin-top:1rem"><div class="field full"><label>Título do plano</label><input class="control" id="review-plan-title" value="${row.review.title||row.defect}"></div><div class="field"><label>Responsável</label><input class="control" id="review-plan-owner" value="${row.review.responsible}"></div><div class="field"><label>Prazo</label><input class="control" id="review-plan-due" value="${row.review.dueDate}"></div></div>`,`${button('Cancelar','close-overlay')}${button('Criar plano vinculado','confirm-create-review-plan',{primary:true,icon:'check',id:row.id})}`));}
   if(action==='confirm-create-review-plan'){const row=model.transactions.find(item=>item.id===id),next=model.actions.length+1,planId=`ACT-2026-${String(next).padStart(3,'0')}`,title=$('#review-plan-title')?.value||row.review.title||row.defect,owner=$('#review-plan-owner')?.value||row.review.responsible,dueDate=$('#review-plan-due')?.value||row.review.dueDate;row.review.actionPlanId=planId;row.review.title=title;row.review.responsible=owner;row.review.dueDate=dueDate;model.actions.unshift({id:planId,title,lineCode:row.scrapLine,stationCode:row.stationCode,productArea:row.productArea,owner,ownerArea:row.review.responsibleDepartment||'Qualidade',category4m:row.review.classification4m[0]||'Method',risk:row.review.risk||'Médio',dueDate,status:'Planejada',progress:0,evidenceCount:row.review.evidence.length,transactionIds:[row.id],ifCost:row.ifCost,qty:row.qty,reportIncluded:false,description:row.review.preventive||row.review.corrective||row.occurrence});addAudit('Criou plano de ação a partir da revisão','Action',planId,'Inexistente','Planejada');closeOverlay();renderPage();return showToast(`Plano ${planId} criado e vinculado à revisão.`);}
   if(action==='add-review-evidence'){syncScrapReview();return openOverlay(modal('Adicionar evidência à revisão',`<div class="choice-group">${['Foto','Documento','Comentário','Referência GERP'].map(value=>`<button class="choice" data-action="choose-review-evidence" data-value="${value}">${value}</button>`).join('')}</div><p class="panel-description">A inclusão é simulada; nenhum arquivo real será enviado.</p>`));}
@@ -1728,7 +1939,8 @@ async function handleAction(action,el){
   if(action==='confirm-month-target'){const value=Number($('#month-target-value')?.value),reason=$('#month-target-reason')?.value.trim();if(!value||!reason)return showToast('Informe um valor válido e a justificativa.','error');const before=model.settings.monthlyTargets[Number(id)];model.settings.monthlyTargets[Number(id)]=value;model.settings.targetVersion=`v1.${Number(model.settings.targetVersion.split('.')[1]||0)+1}`;addAudit('Alterou target mensal','Target',`TGT-2026-${String(Number(id)+1).padStart(2,'0')}`,formatCurrency(before),formatCurrency(value));closeOverlay();renderPage();return showToast(`Target atualizado na versão ${model.settings.targetVersion}.`);}
   if(action==='copy-target-year'||action==='new-target-year')return showToast(action==='copy-target-year'?'Targets de 2025 copiados para um novo rascunho de 2027.':'Novo ciclo anual criado como rascunho.');
   if(action==='configure-line-map')return openOverlay(modal(`Configurar mapa · Linha ${id}`,`<p class="panel-description">A edição visual é simulada. Setores, postos, coordenadas e faixas ficam associados à versão do layout.</p><div class="form-grid" style="margin-top:1rem"><div class="field"><label>Layout ID</label><input class="control" value="LAY-${id}-v2" readonly></div><div class="field"><label>Vigência</label><input class="control" value="01/01/2026"></div>${field('Faixa de risco','line-risk-rule',['Por QTY SCRAP','Por IF Cost'],'Por QTY SCRAP')}<div class="field"><label>Responsável padrão</label><input class="control" value="MFG"></div></div>`,`${button('Cancelar','close-overlay')}${button('Salvar versão simulada','close-overlay',{primary:true,icon:'check'})}`));
-  if(action==='new-line-layout')return showToast('Rascunho de layout criado para configuração.');
+  if(action==='new-line-layout')return openOverlay(modal('Cadastrar linha',`<div class="form-grid"><div class="field"><label>Código da linha</label><input class="control" id="new-line-code" placeholder="Ex.: G16" maxlength="16"></div><div class="field"><label>Vigência</label><input class="control" id="new-line-effective" value="01/01/2026"></div></div>`,`${button('Cancelar','close-overlay')}${button('Cadastrar','confirm-new-line',{primary:true,icon:'check'})}`));
+  if(action==='confirm-new-line'){const code=$('#new-line-code')?.value.trim().toUpperCase();if(!code)return showToast('Informe o código da linha.','error');if(scrapLines.includes(code))return showToast('Esta linha já está cadastrada.','error');scrapLines.push(code);localStorage.setItem('hanaro-scrap-lines',JSON.stringify(scrapLines.filter((line)=>!defaultScrapLines.includes(line))));addAudit('Cadastrou linha','Line',code,'Inexistente','Ativa');closeOverlay();renderPage();return showToast(`Linha ${code} cadastrada no catálogo.`);}
   if(action==='new-recipient')return openOverlay(modal('Novo destinatário',`<div class="form-grid"><div class="field"><label>Nome</label><input class="control" id="recipient-name"></div><div class="field"><label>E-mail</label><input class="control" id="recipient-email" type="email"></div><div class="field"><label>Grupo</label><input class="control" id="recipient-group" value="Gestão"></div><div class="field"><label>Escopo</label><input class="control" id="recipient-scope" value="Todos"></div>${field('Consentimento','recipient-consent',['Pendente','Aceito'],'Pendente')}</div>`,`${button('Cancelar','close-overlay')}${button('Cadastrar','confirm-new-recipient',{primary:true,icon:'check'})}`));
   if(action==='edit-recipient'){const recipient=model.recipients.find((item)=>item.id===id);return openOverlay(modal(`Editar destinatário · ${recipient.id}`,`<div class="form-grid"><div class="field"><label>Nome</label><input class="control" id="recipient-name" value="${recipient.name}"></div><div class="field"><label>E-mail</label><input class="control" id="recipient-email" value="${recipient.email}"></div><div class="field"><label>Grupo</label><input class="control" id="recipient-group" value="${recipient.group}"></div><div class="field"><label>Escopo</label><input class="control" id="recipient-scope" value="${recipient.scope}"></div>${field('Consentimento','recipient-consent',['Pendente','Aceito','Revogado'],recipient.consent)}${field('Status','recipient-status',['Ativo','Inativo'],recipient.status)}</div>`,`${button('Cancelar','close-overlay')}${button('Salvar','confirm-edit-recipient',{id,primary:true,icon:'check'})}`));}
   if(action==='confirm-new-recipient'||action==='confirm-edit-recipient'){const name=$('#recipient-name')?.value.trim(),email=$('#recipient-email')?.value.trim();if(!name||!email||!email.includes('@'))return showToast('Informe nome e e-mail válido.','error');let recipient=model.recipients.find((item)=>item.id===id);if(!recipient){recipient={id:`REC-${String(18+model.recipients.length).padStart(4,'0')}`,categories:'Relatórios',status:'Ativo'};model.recipients.unshift(recipient)}Object.assign(recipient,{name,email,group:$('#recipient-group')?.value||'Gestão',scope:$('#recipient-scope')?.value||'Todos',consent:$('#recipient-consent')?.value||'Pendente',status:$('#recipient-status')?.value||recipient.status||'Ativo'});closeOverlay();renderPage();return showToast('Destinatário salvo no cadastro.');}
@@ -1743,7 +1955,7 @@ document.addEventListener('click',(event)=>{
   const actionEl=event.target.closest('[data-action]');if(actionEl){event.preventDefault();handleAction(actionEl.dataset.action,actionEl);return;}
   const row=event.target.closest('tr[data-row-id]');if(row){const {rowId,rowType}=row.dataset;if(rowType==='transaction')openTransaction(rowId);if(rowType==='component')openComponent(rowId);if(rowType==='action')openAction(rowId);if(rowType==='alert')openAlert(rowId);if(rowType==='execution')openExecution(rowId);if(rowType==='audit')openAudit(rowId);if(rowType==='dashboard')openTransaction(rowId);if(rowType==='report')showToast(`Detalhes da versão ${rowId} carregados.`);}
 });
-document.addEventListener('input',(event)=>{if(event.target.id==='scrap-search'){state.scrapSearch=event.target.value;state.scrapPage=1;renderPage();setTimeout(()=>{const input=$('#scrap-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='component-search'){state.componentSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#component-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='audit-search'){state.auditSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#audit-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}});
+document.addEventListener('input',(event)=>{if(event.target.id==='scrap-search'){state.scrapSearch=event.target.value;state.scrapPage=1;renderPage();setTimeout(()=>{const input=$('#scrap-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='component-search'){state.componentSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#component-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='audit-search'){state.auditSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#audit-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}if(event.target.id==='review-selection-search'){syncScrapReview();state.reviewSelectionSearch=event.target.value;renderPage();setTimeout(()=>{const input=$('#review-selection-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)},0)}});
 document.addEventListener('change', (event) => {
   const target = event.target;
   if (target.id === 'global-language' || target.id === 'settings-language') {
@@ -1755,7 +1967,7 @@ document.addEventListener('change', (event) => {
   }
   if (target.id === 'page-size') { state.scrapPageSize = Number(target.value); state.scrapPage = 1; renderPage(); }
   if (target.matches('[data-filter^="dash-"]')) {
-    const dashboardKeys = { 'dash-year': 'year', 'dash-period': 'period', 'dash-product': 'product', 'dash-scrap-line': 'scrapLine', 'dash-component': 'component', 'dash-part-number': 'partNumber', 'dash-compare': 'compare' };
+    const dashboardKeys = { 'dash-year': 'year', 'dash-period': 'period', 'dash-product': 'product', 'dash-scrap-line': 'scrapLine', 'dash-component': 'component' };
     const key = dashboardKeys[target.id];
     if (key) state.dashboardFilters[key] = target.value;
     renderPage();
@@ -1763,10 +1975,12 @@ document.addEventListener('change', (event) => {
   }
   if (target.id === 'scrap-date') { state.scrapFilters.date = target.value; state.scrapPage = 1; renderPage(); }
   if (target.id === 'scrap-product-area') { state.scrapFilters.productArea = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-division') { state.scrapFilters.division = target.value; state.scrapPage = 1; renderPage(); }
   if (target.id === 'scrap-line') { state.scrapFilters.scrapLine = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'scrap-movement-type') { state.scrapFilters.movementType = target.value; state.scrapPage = 1; renderPage(); }
-  if (target.id === 'scrap-processing-status') { state.scrapFilters.processingStatus = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-component') { state.scrapFilters.component = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'scrap-model-code') { state.scrapFilters.modelCode = target.value; state.scrapPage = 1; renderPage(); }
   if (target.id === 'scrap-review-status') { state.scrapFilters.reviewStatus = target.value; state.scrapPage = 1; renderPage(); }
+  if (target.id === 'review-selection-status') { syncScrapReview(); state.reviewSelectionStatus = target.value; renderPage(); }
   if (target.id.startsWith('component-')) { const keys={'component-product':'productArea','component-division':'division','component-type':'itemType','component-status':'status'};if(keys[target.id])state.componentFilters[keys[target.id]]=target.value;renderPage(); }
   if (target.id.startsWith('action-')) { const keys={'action-period':'period','action-product':'productArea','action-line':'scrapLine','action-owner':'owner','action-4m':'category4m','action-risk':'risk','action-status':'status','action-overdue':'overdue'};if(keys[target.id])state.actionFilters[keys[target.id]]=target.value;renderPage(); }
   if (target.id.startsWith('alert-')) { const alertKeys={'alert-period':'period','alert-severity':'severity','alert-type':'type','alert-product':'productArea','alert-line':'scrapLine','alert-status':'status','alert-channel':'channel'}; if(alertKeys[target.id])state.alertFilters[alertKeys[target.id]]=target.value; renderPage(); }
@@ -1786,7 +2000,7 @@ $('#overlay-layer').addEventListener('click',(event)=>{if(event.target.id==='ove
 $('#sidebar-toggle').addEventListener('click',()=>{const shell=$('#app-shell'),collapsed=shell.classList.toggle('sidebar-collapsed');$('#sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('#sidebar-toggle').setAttribute('aria-label',collapsed?'Expandir menu':'Recolher menu');});
 $('#mobile-menu').addEventListener('click',()=>$('#app-shell').classList.add('sidebar-open'));
 $('#sidebar-backdrop').addEventListener('click',closeMobileSidebar);
-window.addEventListener('hashchange',()=>{const parts=(location.hash.slice(1)||'dashboard').split('?')[0].split('/');state.route=parts[0]||'dashboard';if(state.route==='scrap'){state.scrapView=parts[1]==='revisar'?'review':'list';if(parts[2]){state.activeReviewId=decodeURIComponent(parts[2]);state.selectedScrapIds=[state.activeReviewId];}}renderPage();closeMobileSidebar();});
+window.addEventListener('hashchange',()=>{const parts=(location.hash.slice(1)||'dashboard').split('?')[0].split('/');state.route=parts[0]||'dashboard';if(state.route==='scrap'){state.scrapView=parts[1]==='revisar'?'review':'list';if(parts[2]){state.activeReviewId=decodeURIComponent(parts[2]);state.selectedScrapIds=[state.activeReviewId];state.reviewStep=1;state.reviewApplyAll=false;}}renderPage();closeMobileSidebar();});
 window.addEventListener('mousemove',()=>{if(state.tvActive)showTvControls();});
 window.addEventListener('keydown',(event)=>{if(state.tvActive){showTvControls();if(event.key==='ArrowLeft'){event.preventDefault();changeTvPanel(-1)}if(event.key==='ArrowRight'){event.preventDefault();changeTvPanel(1)}if(event.key===' '){event.preventDefault();toggleTvPause()}if(event.key.toLowerCase()==='f'){event.preventDefault();if(!document.fullscreenElement)$('#tv-mode').requestFullscreen?.();else document.exitFullscreen?.()}if(event.key==='Escape')exitTvMode();return}if(event.key==='Escape'){closeOverlay();closeMobileSidebar();}});
 window.addEventListener('resize',()=>chartInstances.forEach(instance=>instance.resize()));

@@ -1,6 +1,10 @@
 'use strict';
 
 const dashboardApi = { loading: false, connected: false, error: '', request: 0 };
+const dashboardApiConfig = {
+  enabled: window.HANARO_DASHBOARD_API?.enabled === true,
+  endpoint: window.HANARO_DASHBOARD_API?.endpoint || '/dashboard/data',
+};
 window.dashboardApiConnected = false;
 window.dashboardApiYears = [];
 
@@ -16,11 +20,14 @@ function dashboardQuery() {
   const dimensions = {
     product: ['product', 'Todos'],
     receipt_department: ['scrapLine', 'Todas'],
+    division: ['division', 'Todos'],
+    week: ['week', 'Todas'],
     item_type: ['component', 'Todos'],
     item: ['partNumber', 'Todos'],
   };
   Object.entries(dimensions).forEach(([parameter, [key, empty]]) => {
-    if (filters[key] !== empty) params.set(parameter, filters[key]);
+    const values = dashboardFilterValues(filters[key], empty);
+    values.forEach((value) => params.append(parameter, value));
   });
   return params;
 }
@@ -29,9 +36,12 @@ function asTransaction(row) {
   const [year, month, day] = row.transaction_date.split('-');
   const isReversal = row.gross_scrap_usd === 0 && row.reversal_usd > 0;
   return {
-    id: row.source_id,
+    id: row.occurrence_id || row.source_id,
+    occurrenceId: row.occurrence_id || row.source_id,
+    year: Number(year),
     transactionDate: `${day}/${month}/${year}`,
     monthIndex: row.month_number - 1,
+    weekNumber: row.week_number,
     weekLabel: row.week_label,
     productArea: row.product,
     scrapLine: row.receipt_department,
@@ -49,8 +59,8 @@ function asTransaction(row) {
     exchangeRate: null,
     department: row.department,
     division: row.division,
-    sector: 'Sem dado na planilha',
-    stationCode: 'MOCK',
+    sector: row.sector || 'Não informado',
+    stationCode: row.station_code || 'Não informado',
     defect: row.reason,
     occurrence: row.request_reason,
     movementType: isReversal ? 'Estorno' : 'Scrap',
@@ -61,7 +71,7 @@ function asTransaction(row) {
       responsibleDepartment: 'Não disponível', actionPlanId: null, includeInReport: false,
     },
     account: 'Não disponível', accountAlias: 'Não disponível',
-    source: 'API / SQLite', batch: 'workbook-import', executionId: 'workbook-import',
+    source: row.source || 'API', batch: row.ingestion_id || 'workbook-import', executionId: row.bot_run_id || row.ingestion_id || 'workbook-import',
     processedAt: state.dashboardUpdatedAt,
   };
 }
@@ -79,10 +89,12 @@ function applyDashboardPayload(payload) {
   replaceValues(dashboardSpreadsheetSeries.reversalQty, monthlyValues(current, 'reversal_qty'));
   replaceValues(dashboardSpreadsheetSeries.targetUsd, monthlyValues(current, 'target_usd'));
 
-  replaceValues(productAreas, payload.filters.product);
-  replaceValues(scrapLines, payload.filters.receipt_department);
+  replaceValues(productAreas, [...new Set([...productAreas, ...(payload.filters.product || [])])]);
+  replaceValues(scrapLines, [...new Set([...scrapLines, ...(payload.filters.receipt_department || [])])]);
+  if (Array.isArray(payload.filters.division)) replaceValues(divisions, payload.filters.division);
   replaceValues(components, payload.filters.item_type);
   replaceValues(partNumbers, payload.filters.item);
+  replaceValues(sectors, payload.filters.sector || [...new Set(payload.details.map((row) => row.sector || 'Não informado'))]);
   window.dashboardApiYears = payload.filters.year;
   model.transactions.splice(0, model.transactions.length, ...payload.details.map(asTransaction));
 }
@@ -90,16 +102,25 @@ function applyDashboardPayload(payload) {
 window.dashboardApiStatusHtml = () => {
   if (dashboardApi.loading) return '<section class="api-data-state loading"><strong>Atualizando dados da API…</strong><span>Os gráficos serão redesenhados ao concluir.</span></section>';
   if (dashboardApi.connected) return '<section class="api-data-state connected"><strong>Dados reais · FastAPI + SQLite</strong><span>Mock somente em posto/setor, workflow de revisão e análise relativa.</span></section>';
+  if (!dashboardApiConfig.enabled) return '<section class="api-data-state mock"><strong>Dados simulados</strong><span>Integração com o backend desativada neste protótipo.</span></section>';
   return `<section class="api-data-state error"><strong>API indisponível · exibindo o mock inicial</strong><span>${dashboardApi.error || 'Abra o protótipo por http://localhost:8000/prototype/.'}</span></section>`;
 };
 
 async function refreshDashboardData() {
+  if (!dashboardApiConfig.enabled) {
+    dashboardApi.loading = false;
+    dashboardApi.connected = false;
+    dashboardApi.error = '';
+    window.dashboardApiConnected = false;
+    return;
+  }
   const request = ++dashboardApi.request;
   dashboardApi.loading = true;
   dashboardApi.error = '';
   if (state.route === 'dashboard') renderPage();
   try {
-    const response = await fetch(`/dashboard/data?${dashboardQuery()}`);
+    const separator = dashboardApiConfig.endpoint.includes('?') ? '&' : '?';
+    const response = await fetch(`${dashboardApiConfig.endpoint}${separator}${dashboardQuery()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     if (request !== dashboardApi.request) return;
@@ -125,17 +146,14 @@ if (state.dashboardFilters.period === 'Acumulado Jan–Ago') state.dashboardFilt
 refreshDashboardData();
 
 document.addEventListener('change', (event) => {
-  if (['dash-year', 'dash-product', 'dash-scrap-line', 'dash-component', 'dash-part-number'].includes(event.target.id)) {
-    if (event.target.id === 'dash-year' && state.dashboardFilters.compare.startsWith('Mesmo período')) {
-      state.dashboardFilters.compare = `Mesmo período de ${Number(state.dashboardFilters.year) - 1}`;
-    }
+  if (['dash-year', 'dash-period', 'dash-product', 'dash-scrap-line', 'dash-division', 'dash-component'].includes(event.target.id)) {
     setTimeout(refreshDashboardData, 0);
   }
 });
 
 document.addEventListener('click', (event) => {
   const action = event.target.closest('[data-action]')?.dataset.action;
-  if (['refresh-dashboard', 'clear-dashboard', 'dashboard-remove-filter', 'dashboard-apply-more-filters'].includes(action)) {
+  if (['refresh-dashboard', 'clear-dashboard', 'clear-dashboard-selection', 'dashboard-remove-filter', 'dashboard-multi-clear', 'dashboard-multi-apply'].includes(action)) {
     setTimeout(refreshDashboardData, 0);
   }
 });
